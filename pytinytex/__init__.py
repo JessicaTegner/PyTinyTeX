@@ -6,16 +6,30 @@ from .tinytex_download import download_tinytex
 # Global cache
 __tinytex_path = None
 
+def get_tinytex_path(base="."):
+	global __tinytex_path
+	if __tinytex_path is not None:
+		return __tinytex_path
+	
+	ensure_tinytex_installed(path)
+	if __tinytex_path is None:
+		raise RuntimeError("TinyTeX doesn't seem to be installed. You can install TinyTeX with pytinytex.download_tinytex().")
+	return __tinytex_path
+
 def ensure_tinytex_installed(path="."):
 	global __tinytex_path
+	error_path = None
 	try:
 		if __tinytex_path is not None:
+			error_path = __tinytex_path
 			__tinytex_path = _resolve_path(__tinytex_path)
 		else:
+			error_path = path
 			__tinytex_path = _resolve_path(path)
 		return True
-	except RuntimeError:
+	except RuntimeError as e:
 		__tinytex_path = None
+		raise RuntimeError("Unable to resolve TinyTeX path. Got as far as {}".format(error_path))
 		return False
 
 def _resolve_path(path="."):
@@ -34,6 +48,7 @@ def _resolve_path(path="."):
 			path = new_path
 
 def _jump_folder(path):
+	print(path)
 	dir_index = os.listdir(path)
 	if len(dir_index) == 1:
 		if os.path.isdir(os.path.join(path, dir_index[0])):

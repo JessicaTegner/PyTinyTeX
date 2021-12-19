@@ -13,11 +13,17 @@ def test_failing_resolver(download_tinytex_0):
 	with pytest.raises(RuntimeError):
 		pytinytex._resolve_path("failing")
 	assert pytinytex.__tinytex_path is None
-	pytinytex.ensure_tinytex_installed("failing")
+	with pytest.raises(RuntimeError):
+		pytinytex.ensure_tinytex_installed("failing")
 	assert pytinytex.__tinytex_path is None
 
 def test_successful_resolver(download_tinytex_0):
 	assert pytinytex.__tinytex_path is None
-	pytinytex.ensure_tinytex_installed()
+	pytinytex.ensure_tinytex_installed("tests")
 	assert isinstance(pytinytex.__tinytex_path, str)
 	assert os.path.isdir(pytinytex.__tinytex_path)
+
+def test_get_tinytex_path(download_tinytex_0):
+	pytinytex.ensure_tinytex_installed("tests")
+	assert isinstance(pytinytex.get_tinytex_path(), str)
+	assert pytinytex.__tinytex_path == pytinytex.get_tinytex_path("tests")
