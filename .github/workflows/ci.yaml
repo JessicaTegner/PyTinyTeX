@@ -1,0 +1,31 @@
+name: Continuous Deployment
+
+on:
+  push:
+
+defaults:
+  run:
+    shell: bash
+ 
+jobs:
+  testing:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+        os: [macos-10.15, windows-2019, ubuntu-18.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+      - name: Set Up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -VV
+      - name: Install poetry
+        uses: snok/install-poetry@v1.3.0
+      - name: Install Dependencies
+        run: poetry install -vvv
+      - name: Do testing
+        run: poetry run pytest -vv
