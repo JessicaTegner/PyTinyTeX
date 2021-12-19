@@ -42,6 +42,8 @@ def _resolve_path(path="."):
 			new_path = _jump_folder(os.path.join(path, "bin"))
 		elif "tinytex" in list_dir:
 			new_path = _jump_folder(os.path.join(path, "tinytex"))
+		elif ".tinytex" in list_dir:
+			new_path = _jump_folder(os.path.join(path, ".tinytex"))
 		else:
 			new_path = _jump_folder(path)
 		if new_path is not None:
