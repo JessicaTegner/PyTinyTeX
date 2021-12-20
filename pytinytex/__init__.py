@@ -11,7 +11,7 @@ def get_tinytex_path(base="."):
 	if __tinytex_path is not None:
 		return __tinytex_path
 	
-	ensure_tinytex_installed(path)
+	ensure_tinytex_installed(base)
 	if __tinytex_path is None:
 		raise RuntimeError("TinyTeX doesn't seem to be installed. You can install TinyTeX with pytinytex.download_tinytex().")
 	return __tinytex_path
@@ -50,15 +50,17 @@ def _resolve_path(path="."):
 			path = new_path
 
 def _jump_folder(path):
-	print(path)
 	dir_index = os.listdir(path)
 	if len(dir_index) == 1:
 		if os.path.isdir(os.path.join(path, dir_index[0])):
-			return os.path.join(path, dir_index[0])
+			return _resolve_path(os.path.join(path, dir_index[0]))
 	else:
 		for directory in dir_index:
 			if os.path.isdir(os.path.join(path, directory)):
-				return os.path.join(path, directory)
+				try:
+					return _resolve_path(os.path.join(path, directory))
+				except RuntimeError:
+					pass
 	raise RuntimeError("Unable to resolve TinyTeX path.")
 
 def _check_file(dir, prefix):
