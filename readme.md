@@ -24,7 +24,7 @@ poetry add pytinytex
 ~~~
 
 
-### Installation a version of TinyTeX
+### Installing a version of TinyTeX
 
 Each version of TinyTeX contains three variations:
 * TinyTeX-0.* contains the infraonly scheme of TeX Live, without any LaTeX packages. If you install this variation, you may install any other packages via tlmgr (which is a utility included in this variation), e.g., tlmgr install latex-bin framed.
@@ -40,6 +40,28 @@ import pytinytex
 pytinytex.download_tinytex()
 ~~~
 
+
+### Getting the TinyTeX path
+
+After installing TinyTeX, you can get PyTinyTeX to pick it up with the following
+
+~~~
+import pytinytex
+
+# from the current working dir
+pytinytex.get_tinytex_path()
+
+# Or from a specific starting base
+pytinytex.get_tinytex_path("../../")
+~~~
+
+You can then use the returned string (which is the path to the installed TinyTeX distributions "bin" directory), with other libraries or programs.
+
+
+### TODO
+
+* Wrap the tlmgr interface
+* Wrap the PDFLatex engine
 
 
 ### Contributing
