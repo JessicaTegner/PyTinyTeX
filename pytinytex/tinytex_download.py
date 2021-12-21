@@ -73,7 +73,7 @@ def _get_tinytex_urls(version, variation):
 	response = urlopen(url)
 	content = response.read()
 	# regex for the binaries
-	regex = re.compile(r"/yihui/tinytex-releases/releases/download/.*TinyTeX\-"+variation+r"\-.*.(?:tar\.gz|tgz|zip)")
+	regex = re.compile(r"/yihui/tinytex-releases/releases/download/.*TinyTeX\-.*.(?:tar\.gz|tgz|zip)")
 	# a list of urls to the binaries
 	tinytex_urls_list = regex.findall(content.decode("utf-8"))
 	# actual tinytex version
@@ -85,6 +85,12 @@ def _get_tinytex_urls(version, variation):
 		'tgz': 'darwin'
 	}
 	# parse tinytex from list to dict
+	variation_txt = ""
+	if variation == "0" or variation == "1":
+		variation_txt = "TinyTeX-{}-".format(variation)
+	else:
+		variation_txt = "TinyTeX-v"
+	tinytex_urls_list = {url_frag for url_frag in tinytex_urls_list if variation_txt in url_frag}
 	tinytex_urls = {ext2platform[url_frag[-3:]]: ("https://github.com" + url_frag) for url_frag in tinytex_urls_list}
 	return tinytex_urls, version
 
