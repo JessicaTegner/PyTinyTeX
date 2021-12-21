@@ -1,8 +1,7 @@
 # PyTinyTeX
 
-![Build Status](https://github.com/NicklasTegner/PyTinyTeX/actions/workflows/ci.yml/badge.svg)
-[![GitHub Releases](https://img.shields.io/github/tag/NicklasTegner/PyTinyTeX.svg?label=github+release)](https://github.com/NicklasTegner/PyTinyTeX/releases)
-[![PyPI version](https://badge.fury.io/py/PyTinyTeX.svg)](https://pypi.python.org/pypi/PyTinyTeX/)
+![Build Status](https://github.com/NicklasTegner/PyTinyTeX/actions/workflows/ci.yaml/badge.svg)
+[![PyPI version](https://badge.fury.io/py/pytinytex.svg)](https://pypi.python.org/pypi/PyTinyTeX/)
 [![Development Status](https://img.shields.io/pypi/status/PyTinyTeX.svg)](https://pypi.python.org/pypi/PyTinyTeX/)
 [![Python version](https://img.shields.io/pypi/pyversions/PyTinyTeX.svg)](https://pypi.python.org/pypi/PyTinyTeX/)
 ![License](https://img.shields.io/pypi/l/PyTinyTeX.svg)
@@ -60,6 +59,7 @@ You can then use the returned string (which is the path to the installed TinyTeX
 
 ### TODO
 
+* Write docs, since this looks to be a bigger wrapper than PyPandoc
 * Wrap the tlmgr interface
 * Wrap the PDFLatex engine
 
