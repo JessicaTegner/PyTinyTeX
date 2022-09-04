@@ -1,6 +1,6 @@
 # PyTinyTeX
 
-![Build Status](https://github.com/NicklasTegner/PyTinyTeX/actions/workflows/ci.yaml/badge.svg)
+![Build Status](https://github.com/JessicaTegner/PyTinyTeX/actions/workflows/ci.yaml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/pytinytex.svg)](https://pypi.python.org/pypi/PyTinyTeX/)
 [![Development Status](https://img.shields.io/pypi/status/PyTinyTeX.svg)](https://pypi.python.org/pypi/PyTinyTeX/)
 [![Python version](https://img.shields.io/pypi/pyversions/PyTinyTeX.svg)](https://pypi.python.org/pypi/PyTinyTeX/)
@@ -74,7 +74,7 @@ Contributions are welcome. When opening a PR, please keep the following guidelin
 
 
 ### Contributors
-* [Nicklas Tegner](https://github.com/nicklastegner) - Maintainer and original creator of PyTinyTeX
+* [Jessica Tegner](https://github.com/JessicaTegner) - Maintainer and original creator of PyTinyTeX
 
 ### License
-PyTinyTeX is available under MIT license. See [LICENSE](https://raw.githubusercontent.com/NicklasTegner/PyTinyTeX/master/LICENSE) for more details. TinyTeX itself is available under the GPL-2 license.
+PyTinyTeX is available under MIT license. See [LICENSE](https://raw.githubusercontent.com/JessicaTegner/PyTinyTeX/master/LICENSE) for more details. TinyTeX itself is available under the GPL-2 license.

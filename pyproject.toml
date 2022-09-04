@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "PyTinyTeX"
-version = "0.3.0"
+version = "0.3.1"
 description = "Thin wrapper for \"TinyTeX\" (MIT)"
-authors = ["NicklasTegner <NicklasMCHD@live.dk>"]
+authors = ["JessicaTegner <jessica.tegner@outlook.com>"]
 license = "mit"
 readme = "readme.md"
-repository = "https://github.com/NicklasTegner/PyTinyTeX"
+repository = "https://github.com/JessicaTegner/PyTinyTeX"
 
 classifiers = [
         'Development Status :: 4 - Beta',
