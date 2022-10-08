@@ -6,19 +6,8 @@ import pytest
 import pytinytex
 
 @pytest.fixture(scope="module")
-def download_tinytex_0():
+def download_tinytex():
 	yield pytinytex.download_tinytex(variation=0, target_folder=os.path.join("tests", "tinytex_distribution"), download_folder="tests")
-	cleanup()
-
-
-@pytest.fixture(scope="module")
-def download_tinytex_1():
-	yield pytinytex.download_tinytex(variation=1, target_folder=os.path.join("tests", "tinytex_distribution"), download_folder="tests")
-	cleanup()
-
-@pytest.fixture(scope="module")
-def download_tinytex_2():
-	yield pytinytex.download_tinytex(variation=2, target_folder=os.path.join("tests", "tinytex_distribution"), download_folder="tests")
 	cleanup()
 
 
