@@ -35,9 +35,9 @@ jobs:
       - name: Set up cache
         uses: syphar/restore-virtualenv@v1.2
         id: cache-virtualenv
-              with:
-            requirement_files: poetry.lock
-            custom_virtualenv_dir: .venv
+        with:
+          requirement_files: poetry.lock
+          custom_virtualenv_dir: .venv
       - name: Install dependencies
         run: poetry install
         if: steps.cache-virtualenv.outputs.cache-hit != 'true'
@@ -73,9 +73,9 @@ jobs:
       - name: Set up cache
         uses: syphar/restore-virtualenv@v1.2
         id: cache-virtualenv
-              with:
-            requirement_files: poetry.lock
-            custom_virtualenv_dir: .venv
+        with:
+          requirement_files: poetry.lock
+          custom_virtualenv_dir: .venv
       - name: Install dependencies
         run: poetry install
         if: steps.cache-virtualenv.outputs.cache-hit != 'true'
