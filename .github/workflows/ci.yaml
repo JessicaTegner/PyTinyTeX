@@ -33,14 +33,14 @@ jobs:
           pip3 install poetry
           poetry config virtualenvs.in-project true
       - name: Set up cache
-        uses: actions/cache@v3
-        id: cached-poetry-dependencies
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
+        uses: syphar/restore-virtualenv@v1.2
+        id: cache-virtualenv
+              with:
+            requirement_files: poetry.lock
+            custom_virtualenv_dir: .venv
       - name: Install dependencies
         run: poetry install
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
       - name: run tests
         run: poetry run pytest -vv tests/*
 
@@ -69,7 +69,16 @@ jobs:
       - name: Print Python Information
         run: python -VV
       - name: Update dependencies
-        run: python -m pip install -U pip wheel setuptools twine
+        run: python -m pip install -U pip wheel setuptools twine poetry
+      - name: Set up cache
+        uses: syphar/restore-virtualenv@v1.2
+        id: cache-virtualenv
+              with:
+            requirement_files: poetry.lock
+            custom_virtualenv_dir: .venv
+      - name: Install dependencies
+        run: poetry install
+        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
       - name: Build universal source Archive and wheel
         run: poetry build
       - name: Upload artifacts
