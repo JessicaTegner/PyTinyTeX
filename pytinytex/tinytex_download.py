@@ -67,17 +67,23 @@ def download_tinytex(version="latest", variation=1, target_folder=".", download_
 	print("Done")
 
 def _get_tinytex_urls(version, variation):
-	url = "https://github.com/yihui/tinytex-releases/releases/" + \
+	url = "https://github.com/rstudio/tinytex-releases/releases/" + \
 		  ("tag/" if version != "latest" else "") + version
+	# try to open the url
+	try:
+		response = urlopen(url)
+		version_url_frags = response.url.split("/")
+		version = version_url_frags[-1]
+	except urllib.error.HTTPError as e:
+		raise RuntimeError("Invalid TinyTeX version {}.".format(version))
+		return
 	# read the HTML content
-	response = urlopen(url)
+	response = urlopen("https://github.com/rstudio/tinytex-releases/releases/expanded_assets/"+version)
 	content = response.read()
 	# regex for the binaries
-	regex = re.compile(r"/yihui/tinytex-releases/releases/download/.*TinyTeX\-.*.(?:tar\.gz|tgz|zip)")
+	regex = re.compile(r"/rstudio/tinytex-releases/releases/download/.*TinyTeX\-.*.(?:tar\.gz|tgz|zip)")
 	# a list of urls to the binaries
 	tinytex_urls_list = regex.findall(content.decode("utf-8"))
-	# actual tinytex version
-	version = tinytex_urls_list[0].split('/')[5]
 	# dict that lookup the platform from binary extension
 	ext2platform = {
 		'zip': 'win32',
