@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "PyTinyTeX"
-version = "0.3.3"
+version = "0.3.4"
 description = "Thin wrapper for \"TinyTeX\" (MIT)"
 authors = ["JessicaTegner <jessica.tegner@outlook.com>"]
 license = "mit"
