@@ -28,21 +28,19 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Print Python Information
         run: python -VV
-      - name: Install and configure Poetry
-        run: |
-          pip3 install poetry
-          poetry config virtualenvs.in-project true
+      - name: Install and configure uv
+        run: pip3 install uv
       - name: Set up cache
-        uses: syphar/restore-virtualenv@v1.2
-        id: cache-virtualenv
+        uses: actions/cache@v4
+        id: cached-uv-dependencies
         with:
-          requirement_files: poetry.lock
-          custom_virtualenv_dir: .venv
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/uv.lock') }}
       - name: Install dependencies
-        run: poetry install
-        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+        run: uv sync --all-extras
+        if: steps.cached-uv-dependencies.outputs.cache-hit != 'true'
       - name: run tests
-        run: poetry run pytest -vv tests/*
+        run: uv run pytest -vv tests/*
 
   builder:
     needs: [test]
@@ -68,19 +66,22 @@ jobs:
           architecture: "${{ env.PYTHON_ARCHITECTURE }}"
       - name: Print Python Information
         run: python -VV
-      - name: Update dependencies
-        run: python -m pip install -U pip wheel setuptools twine poetry
+      - name: Install and configure uv
+        run: pip3 install uv
       - name: Set up cache
-        uses: syphar/restore-virtualenv@v1.2
-        id: cache-virtualenv
+        uses: actions/cache@v4
+        id: cached-uv-dependencies
         with:
-          requirement_files: poetry.lock
-          custom_virtualenv_dir: .venv
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/uv.lock') }}
       - name: Install dependencies
-        run: poetry install
-        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+        run: uv sync --all-extras
+        if: steps.cached-uv-dependencies.outputs.cache-hit != 'true'
+
       - name: Build universal source Archive and wheel
-        run: poetry build
+        run: uv build
+      - name: delete all files in dist that is not tar.gz or whl
+        run: find dist/ -type f ! -name "*.tar.gz" ! -name "*.whl" -delete
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -89,8 +90,10 @@ jobs:
 
   publisher_release:
     needs: [builder]
-    if: startsWith(github.event.ref, 'refs/tags/v') && github.ref == 'refs/heads/master'
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -103,8 +106,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           verbose: true
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
+        
 
   publisher_latest:
     needs: [builder]
