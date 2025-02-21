@@ -1,9 +1,10 @@
 import sys
 import subprocess
-import glob
 import os
+import platform
+from pathlib import Path
 
-from .tinytex_download import download_tinytex
+from .tinytex_download import download_tinytex # noqa
 
 # Global cache
 __tinytex_path = getattr(os.environ, "PYTINYTEX_TINYTEX", None)
@@ -28,6 +29,13 @@ def get_tinytex_path(base="."):
 		raise RuntimeError("TinyTeX doesn't seem to be installed. You can install TinyTeX with pytinytex.download_tinytex().")
 	return __tinytex_path
 
+def get_pdf_latex_engine():
+	if platform.system() == "Windows":
+		return os.path.join(get_tinytex_path(), "pdflatex.exe")
+	else:
+		return os.path.join(get_tinytex_path(), "pdflatex")
+
+
 def ensure_tinytex_installed(path="."):
 	global __tinytex_path
 	error_path = None
@@ -39,7 +47,7 @@ def ensure_tinytex_installed(path="."):
 			error_path = path
 			__tinytex_path = _resolve_path(path)
 		return True
-	except RuntimeError as e:
+	except RuntimeError:
 		__tinytex_path = None
 		raise RuntimeError("Unable to resolve TinyTeX path. Got as far as {}".format(error_path))
 		return False
@@ -47,7 +55,7 @@ def ensure_tinytex_installed(path="."):
 def _resolve_path(path="."):
 	while True:
 		if _check_file(path, "tlmgr"):
-			return path
+			return str(Path(path).resolve())
 		new_path = ""
 		list_dir = os.listdir(path)
 		if "bin" in list_dir:
@@ -107,7 +115,7 @@ def _run_tlmgr_command(args, path, machine_readable=True):
 		env=new_env,
 		creationflags=creation_flag)
 	# something else than 'None' indicates that the process already terminated
-	if not (p.returncode is None):
+	if p.returncode is not None:
 		raise RuntimeError(
 			'TLMGR died with exitcode "%s" before receiving input: %s' % (p.returncode,
 																		   p.stderr.read())
