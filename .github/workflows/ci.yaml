@@ -29,7 +29,7 @@ jobs:
       - name: Print Python Information
         run: python -VV
       - name: Install and configure uv
-        run: pip3 install uv
+        run: pip3 install -U pip uv
       - name: Set up cache
         uses: actions/cache@v4
         id: cached-uv-dependencies
@@ -43,51 +43,37 @@ jobs:
         run: uv run pytest -vv tests/*
 
   builder:
-    needs: [test]
-    if: github.ref == 'refs/heads/master'
-    strategy:
-      matrix:
-        os: [macos-11, windows-2019]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v2
-      - name: Discover python architecture
-        run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            echo "PYTHON_ARCHITECTURE=x86" >> $GITHUB_ENV
-          else
-            echo "PYTHON_ARCHITECTURE=x64" >> $GITHUB_ENV
-          fi
-      - name: Set up python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.9.x"
-          architecture: "${{ env.PYTHON_ARCHITECTURE }}"
-      - name: Print Python Information
-        run: python -VV
-      - name: Install and configure uv
-        run: pip3 install uv
-      - name: Set up cache
-        uses: actions/cache@v4
-        id: cached-uv-dependencies
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/uv.lock') }}
-      - name: Install dependencies
-        run: uv sync --all-extras
-        if: steps.cached-uv-dependencies.outputs.cache-hit != 'true'
-
-      - name: Build universal source Archive and wheel
-        run: uv build
-      - name: delete all files in dist that is not tar.gz or whl
-        run: find dist/ -type f ! -name "*.tar.gz" ! -name "*.whl" -delete
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-
+          needs: [test]
+          runs-on: ubuntu-latest  # Any OS is fine as this wheel is not OS dependent
+          steps:
+            - name: Check out repository
+              uses: actions/checkout@v4
+            - name: Set up python
+              id: setup-python
+              uses: actions/setup-python@v5
+              with:
+                python-version: 3.11  # Build any 1 python version as this wheel is not version dependent
+            - name: Install and configure uv
+              run: pip3 install uv
+            - name: Set up cache
+              uses: actions/cache@v4
+              id: cached-uv-dependencies
+              with:
+                path: .venv
+                key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/uv.lock') }}
+            - name: Install dependencies
+              run: uv sync --all-extras
+              if: steps.cached-uv-dependencies.outputs.cache-hit != 'true'
+            - name: Build universal source Archive and wheel
+              run: uv build
+            - name: delete all files in dist that is not tar.gz or whl
+              run: find dist/ -type f ! -name "*.tar.gz" ! -name "*.whl" -delete
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                name: python-package-distributions
+                path: dist/
+              
   publisher_release:
     needs: [builder]
     if: startsWith(github.ref, 'refs/tags/v')
