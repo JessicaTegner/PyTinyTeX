@@ -83,7 +83,7 @@ jobs:
       - name: delete all files in dist that is not tar.gz or whl
         run: find dist/ -type f ! -name "*.tar.gz" ! -name "*.whl" -delete
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
@@ -98,7 +98,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
@@ -116,7 +116,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
