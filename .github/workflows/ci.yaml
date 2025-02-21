@@ -39,6 +39,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
         if: steps.cached-uv-dependencies.outputs.cache-hit != 'true'
+      - name: Run ruff
+        run: uv run ruff check
       - name: run tests
         run: uv run pytest -vv tests/*
 
