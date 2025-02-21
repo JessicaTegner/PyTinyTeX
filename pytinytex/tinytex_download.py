@@ -74,7 +74,7 @@ def _get_tinytex_urls(version, variation):
 		response = urlopen(url)
 		version_url_frags = response.url.split("/")
 		version = version_url_frags[-1]
-	except urllib.error.HTTPError as e:
+	except urllib.error.HTTPError:
 		raise RuntimeError("Invalid TinyTeX version {}.".format(version))
 		return
 	# read the HTML content

@@ -1,14 +1,13 @@
 import os
 import pytest
 
-from .utils import download_tinytex
-
 import pytinytex
+from .utils import download_tinytex # noqa
 
-def test_empty_cache(download_tinytex):
+def test_empty_cache(download_tinytex): # noqa
 	assert pytinytex.__tinytex_path is None
 
-def test_failing_resolver(download_tinytex):
+def test_failing_resolver(download_tinytex): # noqa
 	assert pytinytex.__tinytex_path is None
 	with pytest.raises(RuntimeError):
 		pytinytex._resolve_path("failing")
@@ -17,13 +16,18 @@ def test_failing_resolver(download_tinytex):
 		pytinytex.ensure_tinytex_installed("failing")
 	assert pytinytex.__tinytex_path is None
 
-def test_successful_resolver(download_tinytex):
+def test_successful_resolver(download_tinytex): # noqa
 	assert pytinytex.__tinytex_path is None
 	pytinytex.ensure_tinytex_installed("tests")
 	assert isinstance(pytinytex.__tinytex_path, str)
 	assert os.path.isdir(pytinytex.__tinytex_path)
 
-def test_get_tinytex_path(download_tinytex):
+def test_get_tinytex_path(download_tinytex): # noqa
 	pytinytex.ensure_tinytex_installed("tests")
 	assert isinstance(pytinytex.get_tinytex_path(), str)
 	assert pytinytex.__tinytex_path == pytinytex.get_tinytex_path("tests")
+
+def get_pdf_latex_engine(download_tinytex): # noqa
+	pytinytex.ensure_tinytex_installed("tests")
+	assert isinstance(pytinytex.get_pdf_latex_engine(), str)
+	assert os.path.isfile(pytinytex.get_pdf_latex_engine())
