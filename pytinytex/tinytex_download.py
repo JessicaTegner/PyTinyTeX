@@ -17,6 +17,13 @@ except ImportError:
 DEFAULT_TARGET_FOLDER = Path.home() / ".pytinytex"
 
 def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET_FOLDER, download_folder=None):
+	if variation not in [0, 1, 2]:
+		raise RuntimeError("Invalid TinyTeX variation {}. Valid variations are 0, 1, 2.".format(variation))
+	if re.match(r"\d{4}\.\d{2}", version) or version == "latest":
+		if version != "latest":
+			version = "v" + version
+	else:
+		raise RuntimeError("Invalid TinyTeX version {}. TinyTeX version has to be in the format 'latest' for the latest available version, or year.month, for example: '2024.12', '2024.09' for a specific version.".format(version))
 	variation = str(variation)
 	pf = sys.platform
 	if pf.startswith("linux"):
@@ -88,8 +95,7 @@ def _get_tinytex_urls(version, variation):
 		version_url_frags = response.url.split("/")
 		version = version_url_frags[-1]
 	except urllib.error.HTTPError:
-		raise RuntimeError("Invalid TinyTeX version {}.".format(version))
-		return
+		raise RuntimeError("Can't find TinyTeX version %s" % version)
 	# read the HTML content
 	response = urlopen("https://github.com/rstudio/tinytex-releases/releases/expanded_assets/"+version)
 	content = response.read()

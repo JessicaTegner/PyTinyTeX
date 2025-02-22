@@ -20,7 +20,7 @@ def test_get_tinytex_path(download_tinytex): # noqa
 	pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
 	assert pytinytex.__tinytex_path == pytinytex.get_tinytex_path(TINYTEX_DISTRIBUTION)
 
-@pytest.mark.parametrize("download_tinytex", [2], indirect=True)
+@pytest.mark.parametrize("download_tinytex", [1], indirect=True)
 def test_get_pdf_latex_engine(download_tinytex): # noqa
 	pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
 	assert isinstance(pytinytex.get_pdf_latex_engine(), str)
