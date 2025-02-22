@@ -2,7 +2,6 @@ import sys
 import os
 import subprocess
 import platform
-from pathlib import Path
 
 from .tinytex_download import download_tinytex, DEFAULT_TARGET_FOLDER # noqa
 
