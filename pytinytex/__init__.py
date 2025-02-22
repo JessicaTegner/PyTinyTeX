@@ -1,6 +1,6 @@
 import sys
 import os
-import subprocess
+import asyncio
 import platform
 
 from .tinytex_download import download_tinytex, DEFAULT_TARGET_FOLDER # noqa
@@ -8,14 +8,17 @@ from .tinytex_download import download_tinytex, DEFAULT_TARGET_FOLDER # noqa
 # Global cache
 __tinytex_path = None
 
-def update(package="-all"):
+def update(package="-all", machine_readable=False):
 	path = get_tinytex_path()
-	try:
-		code, stdout,stderr = _run_tlmgr_command(["update", package], path, False)
-		return True
-	except RuntimeError:
-		raise
-		return False
+	return _run_tlmgr_command(["update", package], path, machine_readable=machine_readable)
+
+def shell():
+	path = get_tinytex_path()
+	return _run_tlmgr_command(["shell"], path, machine_readable=False, interactive=True)
+
+def help(*args, **kwargs):
+	path = get_tinytex_path()
+	return _run_tlmgr_command(["help"], path, *args, **kwargs)
 
 
 def get_tinytex_path(base=None):
@@ -74,41 +77,93 @@ def _get_file(dir, prefix):
 	except FileNotFoundError:
 		raise RuntimeError("Unable to find {}.".format(prefix))
 
-def _run_tlmgr_command(args, path, machine_readable=True):
+def _run_tlmgr_command(args, path, machine_readable=True, interactive=False):
 	if machine_readable:
 		if "--machine-readable" not in args:
 			args.insert(0, "--machine-readable")
 	tlmgr_executable = _get_file(path, "tlmgr")
 	args.insert(0, tlmgr_executable)
 	new_env = os.environ.copy()
-	creation_flag = 0x08000000 if sys.platform == "win32" else 0 # set creation flag to not open TinyTeX in new console on windows
-	p = subprocess.Popen(
-		args,
-		stdout=subprocess.PIPE,
-		stderr=subprocess.PIPE,
-		env=new_env,
-		creationflags=creation_flag)
-	# something else than 'None' indicates that the process already terminated
-	if p.returncode is not None:
-		raise RuntimeError(
-			'TLMGR died with exitcode "%s" before receiving input: %s' % (p.returncode,
-																		   p.stderr.read())
-		)
-	
-	stdout, stderr = p.communicate()
+	creation_flag = 0x08000000 if sys.platform == "win32" else 0
+
+	try:
+		return asyncio.run(_run_command(*args, stdin=interactive, env=new_env, creationflags=creation_flag))
+	except Exception:
+		raise
+
+async def read_stdout(process, output_buffer):
+	"""Read lines from process.stdout and print them."""
+	try:
+		while True:
+			line = await process.stdout.readline()
+			if not line:  # EOF reached
+				break
+			line = line.decode('utf-8').rstrip()
+			output_buffer.append(line)
+	except Exception as e:
+		print("Error in read_stdout:", e)
+	finally:
+		process._transport.close()
+	return await process.wait()
+
+
+async def send_stdin(process):
+	"""Read user input from sys.stdin and send it to process.stdin."""
+	loop = asyncio.get_running_loop()
+	try:
+		while True:
+			# Offload the blocking sys.stdin.readline() call to the executor.
+			user_input = await loop.run_in_executor(None, sys.stdin.readline)
+			if not user_input:  # EOF (e.g. Ctrl-D)
+				break
+			process.stdin.write(user_input.encode('utf-8'))
+			await process.stdin.drain()
+	except Exception as e:
+		print("Error in send_stdin:", e)
+	finally:
+		if process.stdin:
+			process._transport.close()
+
+
+async def _run_command(*args, stdin=False, **kwargs):
+	# Create the subprocess with pipes for stdout and stdin.
+	process = await asyncio.create_subprocess_exec(
+		*args,
+		stdout=asyncio.subprocess.PIPE,
+		stderr=asyncio.subprocess.STDOUT,
+		stdin=asyncio.subprocess.PIPE if stdin else asyncio.subprocess.DEVNULL,
+		**kwargs
+	)
+
+	output_buffer = []
+	# Create tasks to read stdout and send stdin concurrently.
+	stdout_task = asyncio.create_task(read_stdout(process, output_buffer))
+	stdin_task  = None
+	if stdin:
+		stdin_task  = asyncio.create_task(send_stdin(process))
 	
 	try:
-		stdout = stdout.decode("utf-8")
-	except UnicodeDecodeError:
-		raise RuntimeError("Unable to decode stdout from TinyTeX")
-	
-	try:
-		stderr = stderr.decode("utf-8")
-	except UnicodeDecodeError:
-		raise RuntimeError("Unable to decode stderr from TinyTeX")
-	
-	if stderr == "" and p.returncode == 0:
-		return p.returncode, stdout, stderr
-	else:
-		raise RuntimeError("TLMGR died with the following error:\n{0}".format(stderr.strip()))
-		return p.returncode, stdout, stderr
+		if stdin:
+			# Wait for both tasks to complete.
+			await asyncio.gather(stdout_task, stdin_task)
+		else:
+			# Wait for the stdout task to complete.
+			await stdout_task
+		# Return the process return code.
+		exit_code = await process.wait()
+	except KeyboardInterrupt:
+		print("\nKeyboardInterrupt detected, terminating subprocess...")
+		process.terminate()  # Gracefully terminate the subprocess.
+		exit_code = await process.wait()
+	finally:
+		# Cancel tasks that are still running.
+		stdout_task.cancel()
+		if stdin_task:
+			stdin_task.cancel()
+	captured_output = "\n".join(output_buffer)
+	if exit_code != 0:
+		raise RuntimeError(f"Error running command: {captured_output}")
+	return exit_code, captured_output
+
+
+	return process.returncode
