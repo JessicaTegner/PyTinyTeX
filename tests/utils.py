@@ -5,9 +5,15 @@ import pytest
 
 import pytinytex
 
+TINYTEX_DISTRIBUTION = os.path.join("tests", "tinytex_distribution")
+
 @pytest.fixture(scope="module")
-def download_tinytex():
-	yield pytinytex.download_tinytex(variation=0, target_folder=os.path.join("tests", "tinytex_distribution"), download_folder="tests")
+def download_tinytex(request):
+	try:
+		variation = request.param
+	except AttributeError:
+		variation = 0
+	yield pytinytex.download_tinytex(variation=variation, target_folder=TINYTEX_DISTRIBUTION, download_folder="tests")
 	cleanup()
 
 

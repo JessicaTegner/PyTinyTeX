@@ -1,13 +1,12 @@
 import sys
-import subprocess
 import os
+import subprocess
 import platform
-from pathlib import Path
 
-from .tinytex_download import download_tinytex # noqa
+from .tinytex_download import download_tinytex, DEFAULT_TARGET_FOLDER # noqa
 
 # Global cache
-__tinytex_path = getattr(os.environ, "PYTINYTEX_TINYTEX", None)
+__tinytex_path = None
 
 def update(package="-all"):
 	path = get_tinytex_path()
@@ -19,14 +18,16 @@ def update(package="-all"):
 		return False
 
 
-def get_tinytex_path(base="."):
-	global __tinytex_path
-	if __tinytex_path is not None:
+def get_tinytex_path(base=None):
+	if __tinytex_path:
 		return __tinytex_path
+	path_to_resolve = DEFAULT_TARGET_FOLDER
+	if base:
+		path_to_resolve = base
+	if os.environ.get("PYTINYTEX_TINYTEX", None):
+		path_to_resolve = os.environ["PYTINYTEX_TINYTEX"]
 	
-	ensure_tinytex_installed(base)
-	if __tinytex_path is None:
-		raise RuntimeError("TinyTeX doesn't seem to be installed. You can install TinyTeX with pytinytex.download_tinytex().")
+	ensure_tinytex_installed(path_to_resolve)
 	return __tinytex_path
 
 def get_pdf_latex_engine():
@@ -36,52 +37,26 @@ def get_pdf_latex_engine():
 		return os.path.join(get_tinytex_path(), "pdflatex")
 
 
-def ensure_tinytex_installed(path="."):
+def ensure_tinytex_installed(path=None):
 	global __tinytex_path
-	error_path = None
+	if not path:
+		path = __tinytex_path
+	__tinytex_path = _resolve_path(path)
+	return True
+
+def _resolve_path(path):
 	try:
-		if __tinytex_path is not None:
-			error_path = __tinytex_path
-			__tinytex_path = _resolve_path(__tinytex_path)
-		else:
-			error_path = path
-			__tinytex_path = _resolve_path(path)
-		return True
-	except RuntimeError:
-		__tinytex_path = None
-		raise RuntimeError("Unable to resolve TinyTeX path. Got as far as {}".format(error_path))
-		return False
-
-def _resolve_path(path="."):
-	while True:
 		if _check_file(path, "tlmgr"):
-			return str(Path(path).resolve())
-		new_path = ""
-		list_dir = os.listdir(path)
-		if "bin" in list_dir:
-			new_path = _jump_folder(os.path.join(path, "bin"))
-		elif "tinytex" in list_dir:
-			new_path = _jump_folder(os.path.join(path, "tinytex"))
-		elif ".tinytex" in list_dir:
-			new_path = _jump_folder(os.path.join(path, ".tinytex"))
-		else:
-			new_path = _jump_folder(path)
-		if new_path is not None:
-			path = new_path
-
-def _jump_folder(path):
-	dir_index = os.listdir(path)
-	if len(dir_index) == 1:
-		if os.path.isdir(os.path.join(path, dir_index[0])):
-			return _resolve_path(os.path.join(path, dir_index[0]))
-	else:
-		for directory in dir_index:
-			if os.path.isdir(os.path.join(path, directory)):
-				try:
-					return _resolve_path(os.path.join(path, directory))
-				except RuntimeError:
-					pass
-	raise RuntimeError("Unable to resolve TinyTeX path.")
+			return path
+		# if there is a bin folder, go into it
+		if os.path.isdir(os.path.join(path, "bin")):
+			return _resolve_path(os.path.join(path, "bin"))
+		# if there is only 1 folder in the path, go into it
+		if len(os.listdir(path)) == 1:
+			return _resolve_path(os.path.join(path, os.listdir(path)[0]))
+	except FileNotFoundError:
+		pass
+	raise RuntimeError(f"Unable to resolve TinyTeX path.\nTried {path}.\nYou can install TinyTeX using pytinytex.download_tinytex()")
 
 def _check_file(dir, prefix):
 	try:
@@ -89,7 +64,6 @@ def _check_file(dir, prefix):
 			if os.path.splitext(s)[0] == prefix and os.path.isfile(os.path.join(dir, s)):
 				return True
 	except FileNotFoundError:
-		raise RuntimeError("Unable to resolve path.")
 		return False
 
 def _get_file(dir, prefix):
