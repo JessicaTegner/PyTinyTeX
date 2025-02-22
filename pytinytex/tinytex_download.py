@@ -7,14 +7,13 @@ import urllib
 import zipfile
 import tarfile
 from pathlib import Path
+import tempfile
 
 try:
 	from urllib.request import urlopen
 except ImportError:
 	from urllib import urlopen
 
-#OLD_DEFAULT_TARGET_FOLDER = os.path.join(os.path.expanduser("~"), ".pytinytex")
-# convert to Path object
 DEFAULT_TARGET_FOLDER = Path.home() / ".pytinytex"
 
 def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET_FOLDER, download_folder=None):
@@ -30,8 +29,12 @@ def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET
 		raise RuntimeError("Can't handle your platform (only Linux, Mac OS X, Windows).")
 	url = tinytex_urls[pf]
 	filename = url.split("/")[-1]
-	if not download_folder:
+	if download_folder:
+		download_folder = Path(download_folder)
+	else:
 		download_folder = Path(".")
+	if target_folder:
+		target_folder = Path(target_folder)
 	# make sure all the folders exist
 	download_folder.mkdir(parents=True, exist_ok=True)
 	target_folder.mkdir(parents=True, exist_ok=True)
@@ -45,32 +48,33 @@ def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET
 			shutil.copyfileobj(response, out_file)
 		print("* Downloaded TinyTeX, saved in %s ..." % filename)
 	
-	print("Extracting %s to %s..." % (filename, target_folder))
-	extracted_dir_name = "TinyTeX" # for Windows and MacOS
-	if filename.suffix == ".zip":
-		zf = zipfile.ZipFile(filename)
-		zf.extractall(target_folder)
-		zf.close()
-	elif filename.suffix == ".tgz":
-		tf = tarfile.open(filename, "r:gz")
-		tf.extractall(target_folder)
-		tf.close()
-	elif filename.suffix == ".gz":
-		tf = tarfile.open(filename, "r:gz")
-		tf.extractall(target_folder)
-		tf.close()
-		extracted_dir_name = ".TinyTeX" # for linux only
-	else:
-		raise RuntimeError("File {0} not supported".format(filename))
-	tinytex_extracted = target_folder / extracted_dir_name
-	# copy the extracted folder to the target folder, overwriting if necessary
-	print("Copying TinyTeX to %s..." % target_folder)
-	shutil.copytree(tinytex_extracted, target_folder, dirs_exist_ok=True)
-	shutil.rmtree(tinytex_extracted)
+	print("Extracting %s to a temporary folder..." % filename)
+	with tempfile.TemporaryDirectory() as tmpdirname:
+		tmpdirname = Path(tmpdirname)
+		extracted_dir_name = "TinyTeX" # for Windows and MacOS
+		if filename.suffix == ".zip":
+			zf = zipfile.ZipFile(filename)
+			zf.extractall(tmpdirname)
+			zf.close()
+		elif filename.suffix == ".tgz":
+			tf = tarfile.open(filename, "r:gz")
+			tf.extractall(tmpdirname)
+			tf.close()
+		elif filename.suffix == ".gz":
+			tf = tarfile.open(filename, "r:gz")
+			tf.extractall(tmpdirname)
+			tf.close()
+			extracted_dir_name = ".TinyTeX" # for linux only
+		else:
+			raise RuntimeError("File {0} not supported".format(filename))
+		tinytex_extracted = tmpdirname / extracted_dir_name
+		# copy the extracted folder to the target folder, overwriting if necessary
+		print("Copying TinyTeX to %s..." % target_folder)
+		shutil.copytree(tinytex_extracted, target_folder, dirs_exist_ok=True)
 	# go into target_folder/bin, and as long as we keep having 1 and only 1 subfolder, go into that, and add it to path
 	folder_to_add_to_path = target_folder / "bin"
 	while len(list(folder_to_add_to_path.glob("*"))) == 1 and folder_to_add_to_path.is_dir():
-		folder_to_add_to_path = folder_to_add_to_path/ list(folder_to_add_to_path.glob("*"))[0]
+		folder_to_add_to_path = list(folder_to_add_to_path.glob("*"))[0]
 	print(f"Adding TinyTeX to path ({str(folder_to_add_to_path)})...")
 	sys.path.append(str(folder_to_add_to_path))
 	print("Done")
