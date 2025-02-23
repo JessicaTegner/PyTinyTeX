@@ -55,6 +55,7 @@ def ensure_tinytex_installed(path=None):
 		path = __tinytex_path
 	if _resolve_path(path):
 		__tinytex_path = path
+		os.environ["TEXMFCNF"] = path
 		return True
 
 
