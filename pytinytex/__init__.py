@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 import sys
 import os
 import platform
@@ -92,6 +93,8 @@ def _run_tlmgr_command(args, path, machine_readable=True, interactive=False):
 		if "--machine-readable" not in args:
 			args.insert(0, "--machine-readable")
 	tlmgr_executable = _get_file(path, "tlmgr")
+	# resolve any symlinks
+	tlmgr_executable = str(Path(tlmgr_executable).resolve(True))
 	args.insert(0, tlmgr_executable)
 	new_env = os.environ.copy()
 	creation_flag = 0x08000000 if sys.platform == "win32" else 0 # set creation flag to not open TinyTeX in new console on windows
