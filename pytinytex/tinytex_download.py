@@ -1,3 +1,4 @@
+import os
 import sys
 
 import re
@@ -78,12 +79,8 @@ def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET
 		# copy the extracted folder to the target folder, overwriting if necessary
 		print("Copying TinyTeX to %s..." % target_folder)
 		shutil.copytree(tinytex_extracted, target_folder, dirs_exist_ok=True)
-	# go into target_folder/bin, and as long as we keep having 1 and only 1 subfolder, go into that, and add it to path
-	folder_to_add_to_path = target_folder / "bin"
-	while len(list(folder_to_add_to_path.glob("*"))) == 1 and folder_to_add_to_path.is_dir():
-		folder_to_add_to_path = list(folder_to_add_to_path.glob("*"))[0]
-	print(f"Adding TinyTeX to path ({str(folder_to_add_to_path)})...")
-	sys.path.append(str(folder_to_add_to_path))
+	sys.path.append(str(target_folder))
+	os.environ["PYTINYTEX_TINYTEX"] = str(target_folder)
 	print("Done")
 
 def _get_tinytex_urls(version, variation):
