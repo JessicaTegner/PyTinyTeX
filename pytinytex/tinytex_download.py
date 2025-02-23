@@ -1,3 +1,4 @@
+import os
 import sys
 
 import re
@@ -84,6 +85,7 @@ def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET
 		folder_to_add_to_path = list(folder_to_add_to_path.glob("*"))[0]
 	print(f"Adding TinyTeX to path ({str(folder_to_add_to_path)})...")
 	sys.path.append(str(folder_to_add_to_path))
+	os.environ["PYTINYTEX_TINYTEX"] = str(folder_to_add_to_path)
 	print("Done")
 
 def _get_tinytex_urls(version, variation):
