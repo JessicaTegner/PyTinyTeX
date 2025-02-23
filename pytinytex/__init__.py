@@ -53,8 +53,9 @@ def ensure_tinytex_installed(path=None):
 	global __tinytex_path
 	if not path:
 		path = __tinytex_path
-	if _resolve_path(path):
+	if _resolve_path(str(path)):
 		__tinytex_path = path
+		os.environ["TEXMFCNF"] = os.path.join(__tinytex_path, "texmf-dist/web2c")
 		return True
 
 
@@ -66,6 +67,8 @@ def _resolve_path(path):
 		if len(os.listdir(path)) == 1:
 			return _resolve_path(os.path.join(path, os.listdir(path)[0]))
 		if _check_file(path, "tlmgr"):
+			if str(path) not in sys.path:
+				sys.path.append(str(path))
 			return path
 	except FileNotFoundError:
 		pass
