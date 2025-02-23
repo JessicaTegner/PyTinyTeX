@@ -9,19 +9,19 @@ from .tinytex_download import download_tinytex, DEFAULT_TARGET_FOLDER # noqa
 __tinytex_path = None
 
 def update(package="-all", machine_readable=False):
-	path = get_tinytex_path()
+	path = get_tinytex_distribution_path()
 	return _run_tlmgr_command(["update", package], path, machine_readable=machine_readable)
 
 def shell():
-	path = get_tinytex_path()
+	path = get_tinytex_distribution_path()
 	return _run_tlmgr_command(["shell"], path, machine_readable=False, interactive=True)
 
 def help(*args, **kwargs):
-	path = get_tinytex_path()
+	path = get_tinytex_distribution_path()
 	return _run_tlmgr_command(["help"], path, *args, **kwargs)
 
 
-def get_tinytex_path(base=None):
+def get_tinytex_distribution_path(base=None):
 	if __tinytex_path:
 		return __tinytex_path
 	path_to_resolve = DEFAULT_TARGET_FOLDER
@@ -33,35 +33,48 @@ def get_tinytex_path(base=None):
 	ensure_tinytex_installed(path_to_resolve)
 	return __tinytex_path
 
+def get_tlmgr_path():
+	return _resolve_path(get_tinytex_distribution_path())
+
+def get_tlmgr_executable():
+	if platform.system() == "Windows":
+		return os.path.join(get_tlmgr_path(), "tlmgr.bat")
+	else:
+		return os.path.join(get_tlmgr_path(), "tlmgr")
+
 def get_pdf_latex_engine():
 	if platform.system() == "Windows":
-		return os.path.join(get_tinytex_path(), "pdflatex.exe")
+		return os.path.join(get_tlmgr_path(), "pdflatex.exe")
 	else:
-		return os.path.join(get_tinytex_path(), "pdflatex")
+		return os.path.join(get_tlmgr_path(), "pdflatex")
 
 
 def ensure_tinytex_installed(path=None):
 	global __tinytex_path
 	if not path:
 		path = __tinytex_path
-	__tinytex_path = _resolve_path(path)
-	return True
+	if _resolve_path(path):
+		__tinytex_path = path
+		return True
+
 
 def _resolve_path(path):
 	try:
-		if _check_file(path, "tlmgr"):
-			return path
-		# if there is a bin folder, go into it
 		if os.path.isdir(os.path.join(path, "bin")):
 			return _resolve_path(os.path.join(path, "bin"))
 		# if there is only 1 folder in the path, go into it
 		if len(os.listdir(path)) == 1:
 			return _resolve_path(os.path.join(path, os.listdir(path)[0]))
+		if _check_file(path, "tlmgr"):
+			return path
 	except FileNotFoundError:
 		pass
 	raise RuntimeError(f"Unable to resolve TinyTeX path.\nTried {path}.\nYou can install TinyTeX using pytinytex.download_tinytex()")
 
 def _check_file(dir, prefix):
+	# check if a file in dir exists.
+	# the file has to have tthe name, but can have any extension
+	# this is for checking if tlmgr is in the bin folder, and make it work for both Windows and Unix
 	try:
 		for s in os.listdir(dir):
 			if os.path.splitext(s)[0] == prefix and os.path.isfile(os.path.join(dir, s)):
@@ -69,19 +82,11 @@ def _check_file(dir, prefix):
 	except FileNotFoundError:
 		return False
 
-def _get_file(dir, prefix):
-	try:
-		for s in os.listdir(dir):
-			if os.path.splitext(s)[0] == prefix and os.path.isfile(os.path.join(dir, s)):
-				return os.path.join(dir, s)
-	except FileNotFoundError:
-		raise RuntimeError("Unable to find {}.".format(prefix))
-
 def _run_tlmgr_command(args, path, machine_readable=True, interactive=False):
 	if machine_readable:
 		if "--machine-readable" not in args:
 			args.insert(0, "--machine-readable")
-	tlmgr_executable = _get_file(path, "tlmgr")
+	tlmgr_executable = get_tlmgr_executable()
 	args.insert(0, tlmgr_executable)
 	new_env = os.environ.copy()
 	creation_flag = 0x08000000 if sys.platform == "win32" else 0
