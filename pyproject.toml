@@ -1,6 +1,6 @@
 [project]
 name = "PyTinyTeX"
-version = "0.3.4"
+version = "0.4.0"
 description = "Thin wrapper for \"TinyTeX\" (MIT)"
 license = {text = "MIT"}
 authors = [{name = "JessicaTegner", email = "jessica@jessicategner.com"}]

@@ -65,7 +65,7 @@ wheels = [
 
 [[package]]
 name = "pytinytex"
-version = "0.3.4"
+version = "0.4.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]

@@ -12,49 +12,57 @@ PyTinyTeX provides a thin wrapper for [TinyTeX](https://yihui.org/tinytex), A li
 
 Installation through the normal means
 
-~~~
+§§§
 pip install pytinytex
-~~~
-
-Or through poetry
-
-~~~
-poetry add pytinytex
-~~~
-
+§§§
 
 ### Installing a version of TinyTeX
 
 Each version of TinyTeX contains three variations:
-* TinyTeX-0.* contains the infraonly scheme of TeX Live, without any LaTeX packages. If you install this variation, you may install any other packages via tlmgr (which is a utility included in this variation), e.g., tlmgr install latex-bin framed.
+* TinyTeX-0.* contains the infraonly scheme of TeX Live, without any LaTeX packages.
 * TinyTeX-1.* contains about 90 LaTeX packages enough to compile common R Markdown documents (which was the original motivation of the TinyTeX project).
 * TinyTeX-2-* contains more LaTeX packages requested by the community. The list of packages may grow as time goes by, and the size of this variation will grow correspondingly.
 
 
 By default the variation PyTinyTeX will install is variation 1, but this can be changed.
 
-~~~
+§§§
 import pytinytex
 
-pytinytex.download_tinytex()
-~~~
+pytinytex.download_tinytex(variation=0)
+§§§
 
 
 ### Getting the TinyTeX path
 
-After installing TinyTeX, you can get PyTinyTeX to pick it up with the following
+After installing TinyTeX, you can get the path to the installed distribution with the following:
 
-~~~
+§§§
 import pytinytex
 
-# from the current working dir
 pytinytex.get_tinytex_path()
+# /home/jessica/.pytinytex/
+# c:\Users\Jessica\.pytinytex\
+§§§
 
-# Or from a specific starting base
-pytinytex.get_tinytex_path("../../")
-~~~
+### Integrating  with pypandoc
 
-You can then use the returned string (which is the path to the installed TinyTeX distributions "bin" directory), with other libraries or programs.
+PyTinyTeX can be used with [PyPandoc](https://pypi.org/project/pypandoc/), a Python wrapper for Pandoc. PyPandoc can be used to convert documents between different formats, including LaTeX to PDF.
+To use PyTinyTeX with pypandoc, when working with latex or pdf documents, you need to give pypandoc the path the pdflatex (included with variation 1 and above), like the ofllowing:
+
+§§§
+import pytinytex
+import pypandoc
+
+# make sure that pytinytex is installed
+pytinytex.download_tinytex(variation=1)
+
+# get the path to the pdflatex executable
+pdflatex_path = pytinytex.get_pdf_latex_engine()
+
+# convert a markdown file to a pdf
+pypandoc.convert_file('input.md', 'pdf', outputfile='output.pdf', extra_args=['--pdf-engine', pdflatex_path])
+§§§
 
 
 ### TODO
@@ -74,7 +82,9 @@ Contributions are welcome. When opening a PR, please keep the following guidelin
 
 
 ### Contributors
+
 * [Jessica Tegner](https://github.com/JessicaTegner) - Maintainer and original creator of PyTinyTeX
 
 ### License
+
 PyTinyTeX is available under MIT license. See [LICENSE](https://raw.githubusercontent.com/JessicaTegner/PyTinyTeX/master/LICENSE) for more details. TinyTeX itself is available under the GPL-2 license.
