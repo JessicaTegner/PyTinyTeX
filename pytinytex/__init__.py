@@ -55,7 +55,7 @@ def ensure_tinytex_installed(path=None):
 		path = __tinytex_path
 	if _resolve_path(str(path)):
 		__tinytex_path = path
-		os.environ["TEXMFCNF"] = os.path.join(__tinytex_path, "texmf-dist/web2c")
+		os.environ["TEXMFCNF"] = str(__tinytex_path)
 		return True
 
 
