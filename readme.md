@@ -6,85 +6,84 @@
 [![Python version](https://img.shields.io/pypi/pyversions/PyTinyTeX.svg)](https://pypi.python.org/pypi/PyTinyTeX/)
 ![License](https://img.shields.io/pypi/l/PyTinyTeX.svg)
 
-PyTinyTeX provides a thin wrapper for [TinyTeX](https://yihui.org/tinytex), A lightweight, cross-platform, portable, and easy-to-maintain LaTeX distribution based on TeX Live.
 
-### Installation
+PyTinyTeX provides a thin wrapper for [TinyTeX](https://yihui.org/tinytex/), a lightweight, cross-platform, portable, and easy-to-maintain LaTeX distribution based on TeX Live.
 
-Installation through the normal means
+## Installation
 
-§§§
-pip install pytinytex
-§§§
+Install PyTinyTeX using pip:
 
-### Installing a version of TinyTeX
+```bash
+pip install -U pytinytex
+```
 
-Each version of TinyTeX contains three variations:
-* TinyTeX-0.* contains the infraonly scheme of TeX Live, without any LaTeX packages.
-* TinyTeX-1.* contains about 90 LaTeX packages enough to compile common R Markdown documents (which was the original motivation of the TinyTeX project).
-* TinyTeX-2-* contains more LaTeX packages requested by the community. The list of packages may grow as time goes by, and the size of this variation will grow correspondingly.
-
-
-By default the variation PyTinyTeX will install is variation 1, but this can be changed.
-
-§§§
+```python
 import pytinytex
 
-pytinytex.download_tinytex(variation=0)
-§§§
+pytinytex.download_tinytex(variation=0)  # Installs TinyTeX-0.*
+```
+
+**Parameters:**
+
+- `version` (str): Specify the TinyTeX version to install. Use `"latest"` for the most recent version or a specific. Default is `"latest"`. For reference https://github.com/rstudio/tinytex-releases.
+
+- `variation` (int): Choose the variant of TinyTeX to install:
+  - `0`: Contains the `infraonly` scheme of TeX Live, without any LaTeX packages.
+  - `1`(Default) : Contains approximately 90 LaTeX packages, sufficient for compiling common R Markdown documents (the original motivation behind TinyTeX).
+
+  - `2`: Contains a more extensive set of LaTeX packages requested by the community.  The package list may grow over time, increasing the variation's size.
 
 
-### Getting the TinyTeX path
+## Getting the TinyTeX Path
 
-After installing TinyTeX, you can get the path to the installed distribution with the following:
+After installation, retrieve the path to your TinyTeX distribution:
 
-§§§
+```python
 import pytinytex
 
-pytinytex.get_tinytex_path()
-# /home/jessica/.pytinytex/
-# c:\Users\Jessica\.pytinytex\
-§§§
+path = pytinytex.get_tinytex_path()
+print(path)
 
-### Integrating  with pypandoc
+# Example Output (platform dependent):
+# /home/jessica/.pytinytex/  (Linux/macOS)
+# c:\Users\Jessica\.pytinytex\  (Windows)
+```
 
-PyTinyTeX can be used with [PyPandoc](https://pypi.org/project/pypandoc/), a Python wrapper for Pandoc. PyPandoc can be used to convert documents between different formats, including LaTeX to PDF.
-To use PyTinyTeX with pypandoc, when working with latex or pdf documents, you need to give pypandoc the path the pdflatex (included with variation 1 and above), like the ofllowing:
+## Integrating with pypandoc
 
-§§§
-import pytinytex
-import pypandoc
-
-# make sure that pytinytex is installed
-pytinytex.download_tinytex(variation=1)
-
-# get the path to the pdflatex executable
+PyTinyTeX seamlessly integrates with [pypandoc](https://pypi.org/project/pypandoc/), a Python wrapper for Pandoc, enabling document conversion between various formats, including LaTeX to PDF. To leverage PyTinyTeX with pypandoc, especially when working with LaTeX or PDF documents, provide pypandoc with the path to `pdflatex` (included in variation 1 and above):
+ 
+```python
+# Get the path to the pdflatex executable
 pdflatex_path = pytinytex.get_pdf_latex_engine()
 
-# convert a markdown file to a pdf
-pypandoc.convert_file('input.md', 'pdf', outputfile='output.pdf', extra_args=['--pdf-engine', pdflatex_path])
-§§§
+# Convert a Markdown file to PDF
+pypandoc.convert_file(
+    'input.md',
+    'pdf',
+    outputfile='output.pdf',
+    extra_args=['--pdf-engine', pdflatex_path]
+)
+```
 
+## TODO
 
-### TODO
+*   Write docs, since this looks to be a bigger wrapper than PyPandoc
+*   Wrap the tlmgr interface
+*   Wrap the PDFLatex engine
 
-* Write docs, since this looks to be a bigger wrapper than PyPandoc
-* Wrap the tlmgr interface
-* Wrap the PDFLatex engine
-
-
-### Contributing
+## Contributing
 
 Contributions are welcome. When opening a PR, please keep the following guidelines in mind:
+1.  Before implementing, please open an issue for discussion.
+2.  Make sure you have tests for the new logic.
+3.  Add yourself to contributors at README.md unless you are already there. In that case tweak your
 
-1. Before implementing, please open an issue for discussion.
-2. Make sure you have tests for the new logic.
-3. Add yourself to contributors at README.md unless you are already there. In that case tweak your 
 
+## Contributors
 
-### Contributors
+- [Jessica Tegner](https://github.com/JessicaTegner) - Maintainer and original creator of PyTinyTeX
 
-* [Jessica Tegner](https://github.com/JessicaTegner) - Maintainer and original creator of PyTinyTeX
+## License
 
-### License
-
-PyTinyTeX is available under MIT license. See [LICENSE](https://raw.githubusercontent.com/JessicaTegner/PyTinyTeX/master/LICENSE) for more details. TinyTeX itself is available under the GPL-2 license.
+PyTinyTeX is licensed under the MIT License. See `LICENSE` for details. TinyTeX itself is licensed under the GPL-2 license. 
