@@ -42,7 +42,7 @@ def test_info_has_package_key(download_tinytex):  # noqa
 
 def test_search_returns_list(download_tinytex):  # noqa
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
-    result = pytinytex.search("latex")
+    result = pytinytex.search("tex")
     assert isinstance(result, list)
     assert len(result) > 0
     for entry in result:
