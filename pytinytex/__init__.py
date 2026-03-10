@@ -1,13 +1,18 @@
-import asyncio
 import logging
 import os
 import platform
-import shutil
 import sys
 import warnings
-from pathlib import Path
 
 from .tinytex_download import download_tinytex, DEFAULT_TARGET_FOLDER  # noqa
+from .log_parser import LogEntry, ParsedLog, parse_log  # noqa
+from .compiler import CompileResult, compile  # noqa
+from .doctor import DoctorCheck, DoctorResult, doctor  # noqa
+from .tlmgr import (  # noqa
+	install, remove, list_installed, search, info, update,
+	help, shell, get_version, uninstall,
+	_run_tlmgr_command, _parse_tlmgr_list, _parse_tlmgr_info,
+)
 
 logger = logging.getLogger("pytinytex")
 logger.addHandler(logging.NullHandler())
@@ -39,140 +44,15 @@ __all__ = [
 	"uninstall",
 	"help",
 	"shell",
+	"compile",
+	"CompileResult",
+	"LogEntry",
+	"ParsedLog",
+	"parse_log",
+	"doctor",
+	"DoctorResult",
+	"DoctorCheck",
 ]
-
-
-# --- Package management ---
-
-def install(package):
-	"""Install a TeX Live package via tlmgr.
-
-	Args:
-		package: Package name (e.g. "booktabs", "amsmath").
-
-	Returns:
-		Tuple of (exit_code, output).
-	"""
-	path = get_tinytex_path()
-	return _run_tlmgr_command(["install", package], path, False)
-
-def remove(package):
-	"""Remove a TeX Live package via tlmgr.
-
-	Args:
-		package: Package name to remove.
-
-	Returns:
-		Tuple of (exit_code, output).
-	"""
-	path = get_tinytex_path()
-	return _run_tlmgr_command(["remove", package], path, False)
-
-def list_installed():
-	"""List all installed TeX Live packages.
-
-	Returns:
-		List of dicts with keys such as 'name', 'installed', 'detail'.
-	"""
-	path = get_tinytex_path()
-	_, output = _run_tlmgr_command(["list", "--only-installed"], path, True)
-	return _parse_tlmgr_list(output)
-
-def search(query):
-	"""Search for TeX Live packages matching a query.
-
-	Args:
-		query: Search term (package name or keyword).
-
-	Returns:
-		List of dicts with keys such as 'name', 'description'.
-	"""
-	path = get_tinytex_path()
-	_, output = _run_tlmgr_command(["search", query], path, True)
-	return _parse_tlmgr_list(output)
-
-def info(package):
-	"""Get detailed information about a TeX Live package.
-
-	Args:
-		package: Package name.
-
-	Returns:
-		Dict with package metadata (keys vary by package, but typically
-		include 'package', 'revision', 'cat-version', 'category',
-		'shortdesc', 'longdesc', 'installed', 'sizes', etc.).
-	"""
-	path = get_tinytex_path()
-	_, output = _run_tlmgr_command(["info", package], path, True)
-	return _parse_tlmgr_info(output)
-
-def update(package="-all"):
-	"""Update TeX Live packages via tlmgr.
-
-	Args:
-		package: Package name to update, or "-all" (default) to update
-			everything.
-
-	Returns:
-		Tuple of (exit_code, output).
-	"""
-	path = get_tinytex_path()
-	return _run_tlmgr_command(["update", package], path, False)
-
-def help():
-	"""Display tlmgr help text.
-
-	Returns:
-		Tuple of (exit_code, output).
-	"""
-	path = get_tinytex_path()
-	return _run_tlmgr_command(["help"], path, False)
-
-def shell():
-	"""Open an interactive tlmgr shell session."""
-	path = get_tinytex_path()
-	return _run_tlmgr_command(["shell"], path, False, True)
-
-def get_version():
-	"""Return the installed TeX Live / TinyTeX version string.
-
-	Returns:
-		Version string as reported by ``tlmgr --version``.
-	"""
-	path = get_tinytex_path()
-	_, output = _run_tlmgr_command(["--version"], path, False)
-	return output.strip()
-
-def uninstall(path=None):
-	"""Remove the TinyTeX installation from disk and clear the path cache.
-
-	Args:
-		path: Directory to remove.  Defaults to the currently resolved
-			TinyTeX path (or DEFAULT_TARGET_FOLDER).
-	"""
-	global __tinytex_path
-	if not path:
-		path = __tinytex_path or str(DEFAULT_TARGET_FOLDER)
-	# Walk up from the bin directory to the installation root.
-	# __tinytex_path typically points at e.g. .pytinytex/bin/x86_64-linux,
-	# but the user likely means the top-level .pytinytex folder.
-	target = Path(path)
-	default = Path(DEFAULT_TARGET_FOLDER)
-	try:
-		is_under_default = default.exists() and target.is_relative_to(default)
-	except AttributeError:
-		# Path.is_relative_to() was added in Python 3.9
-		try:
-			target.relative_to(default)
-			is_under_default = default.exists()
-		except ValueError:
-			is_under_default = False
-	if is_under_default:
-		target = default
-	if target.exists():
-		shutil.rmtree(target)
-		logger.info("Removed TinyTeX installation at %s", target)
-	__tinytex_path = None
 
 
 # --- Path resolution ---
@@ -184,6 +64,9 @@ def get_tinytex_path(base=None):
 		base: Optional base directory to search in.  Falls back to the
 			``PYTINYTEX_TINYTEX`` environment variable, then
 			DEFAULT_TARGET_FOLDER.
+
+	Raises:
+		RuntimeError: If TinyTeX is not found.
 	"""
 	if __tinytex_path:
 		return __tinytex_path
@@ -200,6 +83,32 @@ def clear_path_cache():
 	"""Reset the cached TinyTeX path so the next call re-resolves it."""
 	global __tinytex_path
 	__tinytex_path = None
+
+def ensure_tinytex_installed(path=None):
+	"""Check that TinyTeX is installed and resolve the bin directory.
+
+	Args:
+		path: Path to check for TinyTeX. Defaults to the cached path or
+			DEFAULT_TARGET_FOLDER.
+
+	Returns:
+		True if TinyTeX is installed.
+
+	Raises:
+		RuntimeError: If TinyTeX is not found. Use
+			``download_tinytex()`` to install it first.
+	"""
+	global __tinytex_path
+	if not path:
+		path = __tinytex_path or DEFAULT_TARGET_FOLDER
+	__tinytex_path = _resolve_path(path)
+	# Ensure the resolved bin directory is on PATH for this process
+	_add_to_path(__tinytex_path)
+	return True
+
+def _tinytex_path():
+	"""Return the current cached path (or None). Used by submodules."""
+	return __tinytex_path
 
 
 # --- Engine discovery ---
@@ -255,104 +164,20 @@ def get_pdf_latex_engine():
 	return get_pdflatex_engine()
 
 
-# --- Installation ---
-
-def ensure_tinytex_installed(path=None, auto_download=True, variation=1):
-	"""Ensure TinyTeX is installed, optionally downloading it if missing.
-
-	Args:
-		path: Path to check for TinyTeX. Defaults to the cached path or
-			DEFAULT_TARGET_FOLDER.
-		auto_download: If True, download TinyTeX when it is not found.
-			Defaults to True.
-		variation: TinyTeX variation to download (0, 1, or 2) when
-			auto_download triggers. Defaults to 1.
-
-	Returns:
-		True if TinyTeX is installed (or was successfully downloaded).
-
-	Raises:
-		RuntimeError: If TinyTeX is not found and auto_download is False.
-	"""
-	global __tinytex_path
-	if not path:
-		path = __tinytex_path or DEFAULT_TARGET_FOLDER
-	try:
-		__tinytex_path = _resolve_path(path)
-	except RuntimeError:
-		if not auto_download:
-			raise
-		logger.info("TinyTeX not found — downloading automatically...")
-		download_tinytex(variation=variation, target_folder=path)
-		__tinytex_path = _resolve_path(path)
-	return True
-
-
-# --- Machine-readable output parsing ---
-
-def _parse_tlmgr_list(output):
-	"""Parse tlmgr list/search machine-readable output into structured data.
-
-	Machine-readable list lines look like:
-		i collection-basic: 1 file, 4k
-	or plain lines like:
-		package_name - short description
-
-	Returns a list of dicts.
-	"""
-	results = []
-	for line in output.splitlines():
-		line = line.strip()
-		if not line:
-			continue
-		if ":" in line:
-			# e.g. "i collection-basic: 12345 1 file, 4k"
-			parts = line.split(":", 1)
-			left = parts[0].strip()
-			right = parts[1].strip() if len(parts) > 1 else ""
-			installed = left.startswith("i")
-			name = left.lstrip("i").strip()
-			results.append({
-				"name": name,
-				"installed": installed,
-				"detail": right,
-			})
-		elif " - " in line:
-			name, desc = line.split(" - ", 1)
-			results.append({
-				"name": name.strip(),
-				"description": desc.strip(),
-			})
-		else:
-			results.append({"name": line})
-	return results
-
-def _parse_tlmgr_info(output):
-	"""Parse tlmgr info machine-readable output into a dict.
-
-	Info output is typically key-value pairs like:
-		package:    booktabs
-		revision:   12345
-		shortdesc:  Publication quality tables
-	Multi-line values (like longdesc) are continued with leading whitespace.
-	"""
-	info = {}
-	current_key = None
-	for line in output.splitlines():
-		if not line.strip():
-			continue
-		if ":" in line and not line[0].isspace():
-			key, _, value = line.partition(":")
-			key = key.strip().lower()
-			value = value.strip()
-			info[key] = value
-			current_key = key
-		elif current_key and line[0].isspace():
-			info[current_key] += " " + line.strip()
-	return info
-
-
 # --- Internal helpers ---
+
+def _is_on_path(directory):
+	"""Check if a directory is on the system PATH, with proper normalization."""
+	norm_dir = os.path.normcase(os.path.normpath(directory))
+	for entry in os.environ.get("PATH", "").split(os.pathsep):
+		if os.path.normcase(os.path.normpath(entry)) == norm_dir:
+			return True
+	return False
+
+def _add_to_path(directory):
+	"""Add a directory to the system PATH for this process if not already there."""
+	if not _is_on_path(directory):
+		os.environ["PATH"] = directory + os.pathsep + os.environ.get("PATH", "")
 
 def _get_platform_arch():
 	"""Return the TeX Live platform-architecture directory name for the current system."""
@@ -418,92 +243,3 @@ def _find_file(dir, prefix):
 	except FileNotFoundError:
 		pass
 	return None
-
-def _run_tlmgr_command(args, path, machine_readable=True, interactive=False):
-	if machine_readable:
-		if "--machine-readable" not in args:
-			args.insert(0, "--machine-readable")
-	tlmgr_executable = _find_file(path, "tlmgr")
-	if not tlmgr_executable:
-		raise RuntimeError(f"Unable to find tlmgr in {path}")
-	# resolve any symlinks
-	tlmgr_executable = str(Path(tlmgr_executable).resolve(True))
-	args.insert(0, tlmgr_executable)
-	new_env = os.environ.copy()
-	creation_flag = 0x08000000 if sys.platform == "win32" else 0
-
-	logger.debug("Running command: %s", args)
-	return asyncio.run(
-		_run_command(*args, stdin=interactive, env=new_env, creationflags=creation_flag)
-	)
-
-
-async def _read_stdout(process, output_buffer):
-	"""Read lines from process.stdout and collect them."""
-	logger.debug("Reading stdout from process %s", process.pid)
-	try:
-		while True:
-			line = await process.stdout.readline()
-			if not line:
-				break
-			line = line.decode('utf-8', errors='replace').rstrip()
-			output_buffer.append(line)
-			logger.info(line)
-	except Exception as e:
-		logger.error("Error in _read_stdout: %s", e)
-	finally:
-		process._transport.close()
-	return await process.wait()
-
-async def _send_stdin(process):
-	"""Read user input from sys.stdin and forward it to the process."""
-	logger.debug("Sending stdin to process %s", process.pid)
-	loop = asyncio.get_running_loop()
-	try:
-		while True:
-			user_input = await loop.run_in_executor(None, sys.stdin.readline)
-			if not user_input:
-				break
-			process.stdin.write(user_input.encode('utf-8'))
-			await process.stdin.drain()
-	except Exception as e:
-		logger.error("Error in _send_stdin: %s", e)
-	finally:
-		if process.stdin:
-			process._transport.close()
-
-
-async def _run_command(*args, stdin=False, **kwargs):
-	process = await asyncio.create_subprocess_exec(
-		*args,
-		stdout=asyncio.subprocess.PIPE,
-		stderr=asyncio.subprocess.STDOUT,
-		stdin=asyncio.subprocess.PIPE if stdin else asyncio.subprocess.DEVNULL,
-		**kwargs
-	)
-
-	output_buffer = []
-	stdout_task = asyncio.create_task(_read_stdout(process, output_buffer))
-	stdin_task = None
-	if stdin:
-		stdin_task = asyncio.create_task(_send_stdin(process))
-
-	try:
-		if stdin:
-			logger.debug("Waiting for stdout and stdin tasks to complete")
-			await asyncio.gather(stdout_task, stdin_task)
-		else:
-			logger.debug("Waiting for stdout task to complete")
-			await stdout_task
-		exit_code = await process.wait()
-	except KeyboardInterrupt:
-		process.terminate()
-		exit_code = await process.wait()
-	finally:
-		stdout_task.cancel()
-		if stdin_task:
-			stdin_task.cancel()
-	captured_output = "\n".join(output_buffer)
-	if exit_code != 0:
-		raise RuntimeError(f"Error running command: {captured_output}")
-	return exit_code, captured_output

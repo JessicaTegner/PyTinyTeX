@@ -10,7 +10,7 @@ def test_failing_resolver(download_tinytex):  # noqa
 	with pytest.raises(RuntimeError):
 		pytinytex._resolve_path("failing")
 	with pytest.raises(RuntimeError):
-		pytinytex.ensure_tinytex_installed("failing", auto_download=False)
+		pytinytex.ensure_tinytex_installed("failing")
 
 def test_successful_resolver(download_tinytex):  # noqa
 	pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)

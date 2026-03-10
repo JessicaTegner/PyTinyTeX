@@ -19,7 +19,7 @@ def _is_arm64():
 	"""Return True if running on an ARM64/aarch64 machine."""
 	return platform.machine().lower() in ("aarch64", "arm64")
 
-def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET_FOLDER, download_folder=None):
+def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET_FOLDER, download_folder=None, progress_callback=None):
 	if variation not in [0, 1, 2]:
 		raise RuntimeError(
 			"Invalid TinyTeX variation {}. Valid variations are 0, 1, 2.".format(variation)
@@ -60,8 +60,17 @@ def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET
 	else:
 		logger.info("* Downloading TinyTeX from %s ...", url)
 		response = urlopen(url)
+		total_size = int(response.headers.get("Content-Length", 0))
 		with open(filename, 'wb') as out_file:
-			shutil.copyfileobj(response, out_file)
+			downloaded = 0
+			while True:
+				chunk = response.read(8192)
+				if not chunk:
+					break
+				out_file.write(chunk)
+				downloaded += len(chunk)
+				if progress_callback:
+					progress_callback(downloaded, total_size)
 		logger.info("* Downloaded TinyTeX, saved in %s ...", filename)
 
 	logger.info("Extracting %s to a temporary folder...", filename)

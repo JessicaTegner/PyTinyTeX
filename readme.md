@@ -6,63 +6,115 @@
 [![Python version](https://img.shields.io/pypi/pyversions/PyTinyTeX.svg)](https://pypi.python.org/pypi/PyTinyTeX/)
 ![License](https://img.shields.io/pypi/l/PyTinyTeX.svg)
 
-PyTinyTeX provides a thin wrapper for [TinyTeX](https://yihui.org/tinytex), A lightweight, cross-platform, portable, and easy-to-maintain LaTeX distribution based on TeX Live.
+The easiest way to go from `.tex` to `.pdf` in Python. PyTinyTeX wraps [TinyTeX](https://yihui.org/tinytex) — a lightweight, cross-platform, portable LaTeX distribution based on TeX Live — and gives you compilation, package management, and diagnostics from Python or the command line.
 
-### Installation
+```python
+import pytinytex
 
-Installation through the normal means
+pytinytex.download_tinytex()
+result = pytinytex.compile("paper.tex", auto_install=True)
+print(result.pdf_path)  # paper.pdf
+```
+
+No system-wide TeX installation required. Missing packages are installed automatically.
+
+---
+
+## Installation
 
 ```
 pip install pytinytex
 ```
 
-### Installing a version of TinyTeX
+Python 3.8+ on Linux, macOS, and Windows.
 
-Each version of TinyTeX contains three variations:
-* TinyTeX-0.* contains the infraonly scheme of TeX Live, without any LaTeX packages.
-* TinyTeX-1.* contains about 90 LaTeX packages enough to compile common R Markdown documents (which was the original motivation of the TinyTeX project).
-* TinyTeX-2-* contains more LaTeX packages requested by the community. The list of packages may grow as time goes by, and the size of this variation will grow correspondingly.
+## Quick start
 
-
-By default the variation PyTinyTeX will install is variation 1, but this can be changed.
+### 1. Get TinyTeX
 
 ```python
 import pytinytex
 
-pytinytex.download_tinytex(variation=0)
+# Download the default variation (variation 1: ~90 common LaTeX packages)
+pytinytex.download_tinytex()
+
+# Or pick a variation:
+#   0 — infrastructure only, no packages
+#   1 — common packages (default)
+#   2 — extended package set
+pytinytex.download_tinytex(variation=2)
+
+# Track download progress
+pytinytex.download_tinytex(progress_callback=lambda downloaded, total: print(f"{downloaded}/{total} bytes"))
 ```
 
-You can also use `ensure_tinytex_installed()` which will automatically download TinyTeX if it is not already installed:
+### 2. Compile a document
 
 ```python
-import pytinytex
+result = pytinytex.compile("paper.tex")
 
-# Downloads TinyTeX automatically if not found
-pytinytex.ensure_tinytex_installed()
+if result.success:
+    print("PDF at:", result.pdf_path)
+else:
+    for error in result.errors:
+        print(f"  ! {error.message} (line {error.line})")
 ```
 
-
-### Getting the TinyTeX path
-
-After installing TinyTeX, you can get the path to the installed distribution with the following:
+Multi-pass compilation for cross-references and TOC:
 
 ```python
-import pytinytex
-
-pytinytex.get_tinytex_path()
-# /home/jessica/.pytinytex/
-# c:\Users\Jessica\.pytinytex\
+result = pytinytex.compile("paper.tex", num_runs=2)
 ```
 
-### LaTeX engine discovery
+Choose your engine:
 
-PyTinyTeX can locate LaTeX engine executables included with TinyTeX (variation 1 and above):
+```python
+result = pytinytex.compile("paper.tex", engine="xelatex")
+result = pytinytex.compile("paper.tex", engine="lualatex")
+```
+
+### 3. Auto-install missing packages
+
+The killer feature: if your document needs a package you don't have, PyTinyTeX can find it, install it, and retry — all in one call:
+
+```python
+result = pytinytex.compile("paper.tex", auto_install=True)
+print(result.installed_packages)  # e.g. ['booktabs', 'pgf']
+```
+
+## Package management
+
+Full access to the TeX Live package manager (tlmgr):
 
 ```python
 import pytinytex
 
-# Generic — pass any engine name
-pytinytex.get_engine("pdflatex")
+pytinytex.install("booktabs")
+pytinytex.remove("booktabs")
+
+# List installed packages (returns list of dicts)
+for pkg in pytinytex.list_installed():
+    print(pkg["name"])
+
+# Search for packages
+pytinytex.search("amsmath")
+
+# Detailed package info (returns dict)
+pytinytex.info("booktabs")
+
+# Update all packages
+pytinytex.update()
+
+# TeX Live version
+pytinytex.get_version()
+```
+
+## Engine discovery
+
+Locate LaTeX engine executables (variation 1+):
+
+```python
+pytinytex.get_engine("pdflatex")   # full path to the executable
 pytinytex.get_engine("xelatex")
 pytinytex.get_engine("lualatex")
 
@@ -72,66 +124,105 @@ pytinytex.get_xelatex_engine()
 pytinytex.get_lualatex_engine()
 ```
 
-### Package management
+## LaTeX log parser
 
-PyTinyTeX wraps the tlmgr (TeX Live Manager) interface for managing LaTeX packages:
+Parse any LaTeX `.log` file into structured data — useful even outside PyTinyTeX:
 
 ```python
-import pytinytex
+from pytinytex import parse_log
 
-# Install / remove packages
-pytinytex.install("booktabs")
-pytinytex.remove("booktabs")
+with open("paper.log") as f:
+    parsed = parse_log(f.read())
 
-# List installed packages (returns list of dicts)
-pytinytex.list_installed()
+for error in parsed.errors:
+    print(f"{error.file}:{error.line}: {error.message}")
 
-# Search for packages
-pytinytex.search("amsmath")
+for warning in parsed.warnings:
+    print(warning.message)
 
-# Get detailed info about a package (returns dict)
-pytinytex.info("booktabs")
-
-# Update all packages
-pytinytex.update()
-
-# Get the TeX Live version string
-pytinytex.get_version()
+# Missing .sty packages detected automatically
+print(parsed.missing_packages)  # e.g. ['tikz', 'booktabs']
 ```
 
-### Integrating  with pypandoc
+## Health check
 
-PyTinyTeX can be used with [PyPandoc](https://pypi.org/project/pypandoc/), a Python wrapper for Pandoc. PyPandoc can be used to convert documents between different formats, including LaTeX to PDF.
-To use PyTinyTeX with pypandoc, when working with latex or pdf documents, you need to give pypandoc the path to pdflatex (included with variation 1 and above), like the following:
+Diagnose your TinyTeX installation:
+
+```python
+result = pytinytex.doctor()
+for check in result.checks:
+    status = "PASS" if check.passed else "FAIL"
+    print(f"  [{status}] {check.name}: {check.message}")
+```
+
+Checks: TinyTeX installed, PATH configured, tlmgr functional, engine availability.
+
+## Command-line interface
+
+Every feature is also available from the terminal:
+
+```bash
+# Download TinyTeX
+pytinytex download
+pytinytex download --variation 2
+
+# Compile a document
+pytinytex compile paper.tex
+pytinytex compile paper.tex --engine xelatex --runs 2 --auto-install
+
+# Package management
+pytinytex install booktabs
+pytinytex remove booktabs
+pytinytex list
+pytinytex search amsmath
+pytinytex info booktabs
+pytinytex update
+
+# Diagnostics
+pytinytex doctor
+pytinytex version
+
+# Also works as a Python module
+python -m pytinytex doctor
+```
+
+## Integrating with pypandoc
+
+PyTinyTeX pairs naturally with [pypandoc](https://pypi.org/project/pypandoc/) for converting Markdown, HTML, and other formats to PDF:
 
 ```python
 import pytinytex
 import pypandoc
 
-# make sure that pytinytex is installed
-pytinytex.ensure_tinytex_installed()
-
-# get the path to the pdflatex executable
 pdflatex_path = pytinytex.get_pdflatex_engine()
-
-# convert a markdown file to a pdf
-pypandoc.convert_file('input.md', 'pdf', outputfile='output.pdf', extra_args=['--pdf-engine', pdflatex_path])
+pypandoc.convert_file("input.md", "pdf", outputfile="output.pdf",
+                      extra_args=["--pdf-engine", pdflatex_path])
 ```
 
+## Uninstalling TinyTeX
 
-### Contributing
+```python
+pytinytex.uninstall()  # removes the TinyTeX directory
+```
+
+Or from the CLI:
+
+```bash
+pytinytex uninstall
+```
+
+## Contributing
 
 Contributions are welcome. When opening a PR, please keep the following guidelines in mind:
 
 1. Before implementing, please open an issue for discussion.
 2. Make sure you have tests for the new logic.
-3. Add yourself to contributors at README.md unless you are already there. In that case tweak your
+3. Add yourself to contributors in this README unless you are already there.
 
+## Contributors
 
-### Contributors
+* [Jessica Tegner](https://github.com/JessicaTegner) — Maintainer and original creator of PyTinyTeX
 
-* [Jessica Tegner](https://github.com/JessicaTegner) - Maintainer and original creator of PyTinyTeX
+## License
 
-### License
-
-PyTinyTeX is available under MIT license. See [LICENSE](https://raw.githubusercontent.com/JessicaTegner/PyTinyTeX/master/LICENSE) for more details. TinyTeX itself is available under the GPL-2 license.
+PyTinyTeX is available under the MIT license. See [LICENSE](https://raw.githubusercontent.com/JessicaTegner/PyTinyTeX/master/LICENSE) for more details. TinyTeX itself is available under the GPL-2 license.
