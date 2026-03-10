@@ -1,10 +1,18 @@
 import pytest
 
 import pytinytex
-from .utils import download_tinytex, TINYTEX_DISTRIBUTION # noqa
+from .utils import download_tinytex, TINYTEX_DISTRIBUTION  # noqa
 
 
-def test_list_installed(download_tinytex): # noqa
+def _self_update_tlmgr():
+    """Update tlmgr itself so it doesn't refuse to run other commands."""
+    try:
+        pytinytex.update("--self")
+    except RuntimeError:
+        pass  # best-effort; may fail if already up to date or no network
+
+
+def test_list_installed(download_tinytex):  # noqa
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
     result = pytinytex.list_installed()
     assert isinstance(result, list)
@@ -15,7 +23,7 @@ def test_list_installed(download_tinytex): # noqa
         assert len(entry["name"]) > 0
 
 
-def test_list_installed_has_known_packages(download_tinytex): # noqa
+def test_list_installed_has_known_packages(download_tinytex):  # noqa
     """Variation 0 still ships infrastructure packages like scheme-infraonly."""
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
     result = pytinytex.list_installed()
@@ -24,14 +32,14 @@ def test_list_installed_has_known_packages(download_tinytex): # noqa
     assert any("tex" in name.lower() for name in names)
 
 
-def test_info_returns_dict(download_tinytex): # noqa
+def test_info_returns_dict(download_tinytex):  # noqa
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
     result = pytinytex.info("tex")
     assert isinstance(result, dict)
     assert len(result) > 0
 
 
-def test_info_has_package_key(download_tinytex): # noqa
+def test_info_has_package_key(download_tinytex):  # noqa
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
     result = pytinytex.info("hyphen-base")
     assert isinstance(result, dict)
@@ -40,7 +48,7 @@ def test_info_has_package_key(download_tinytex): # noqa
         assert result["package"] == "hyphen-base"
 
 
-def test_search_returns_list(download_tinytex): # noqa
+def test_search_returns_list(download_tinytex):  # noqa
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
     result = pytinytex.search("latex")
     assert isinstance(result, list)
@@ -51,9 +59,10 @@ def test_search_returns_list(download_tinytex): # noqa
 
 
 @pytest.mark.parametrize("download_tinytex", [1], indirect=True)
-def test_install_and_remove(download_tinytex): # noqa
+def test_install_and_remove(download_tinytex):  # noqa
     """Install a small package, verify it appears in list, then remove it."""
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
+    _self_update_tlmgr()
     # install a small package
     exit_code, _ = pytinytex.install("blindtext")
     assert exit_code == 0
@@ -73,13 +82,14 @@ def test_install_and_remove(download_tinytex): # noqa
     assert not any("blindtext" == name for name in names)
 
 
-def test_install_nonexistent_package(download_tinytex): # noqa
+def test_install_nonexistent_package(download_tinytex):  # noqa
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
     with pytest.raises(RuntimeError):
         pytinytex.install("this-package-does-not-exist-xyz-123")
 
 
-def test_update(download_tinytex): # noqa
+def test_update(download_tinytex):  # noqa
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
+    _self_update_tlmgr()
     exit_code, output = pytinytex.update()
     assert exit_code == 0

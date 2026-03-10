@@ -345,13 +345,38 @@ def _parse_tlmgr_info(output):
 
 # --- Internal helpers ---
 
+def _get_platform_arch():
+	"""Return the TeX Live platform-architecture directory name for the current system."""
+	machine = platform.machine().lower()
+	system = sys.platform
+	if system == "win32":
+		return "windows"
+	if system == "darwin":
+		if machine == "arm64":
+			return "universal-darwin"
+		return "universal-darwin"
+	# Linux
+	arch_map = {
+		"x86_64": "x86_64-linux",
+		"amd64": "x86_64-linux",
+		"aarch64": "aarch64-linux",
+		"arm64": "aarch64-linux",
+		"i386": "i386-linux",
+		"i686": "i386-linux",
+	}
+	return arch_map.get(machine, machine + "-linux")
+
 def _resolve_path(path):
 	try:
 		if _find_file(path, "tlmgr"):
 			return path
 		if os.path.isdir(os.path.join(path, "bin")):
 			return _resolve_path(os.path.join(path, "bin"))
-		entries = os.listdir(path)
+		entries = [e for e in os.listdir(path) if os.path.isdir(os.path.join(path, e))]
+		# Prefer the directory matching the current platform architecture
+		expected_arch = _get_platform_arch()
+		if expected_arch in entries:
+			return _resolve_path(os.path.join(path, expected_arch))
 		if len(entries) == 1:
 			return _resolve_path(os.path.join(path, entries[0]))
 	except FileNotFoundError:
@@ -402,7 +427,7 @@ async def _read_stdout(process, output_buffer):
 			line = await process.stdout.readline()
 			if not line:
 				break
-			line = line.decode('utf-8').rstrip()
+			line = line.decode('utf-8', errors='replace').rstrip()
 			output_buffer.append(line)
 			logger.info(line)
 	except Exception as e:
