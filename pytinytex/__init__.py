@@ -377,8 +377,18 @@ def _resolve_path(path):
 		expected_arch = _get_platform_arch()
 		if expected_arch in entries:
 			return _resolve_path(os.path.join(path, expected_arch))
+		# Only fall back to a single entry if it's not an architecture mismatch
+		_known_archs = {"x86_64-linux", "aarch64-linux", "i386-linux",
+						"universal-darwin", "x86_64-darwinlegacy", "windows"}
 		if len(entries) == 1:
-			return _resolve_path(os.path.join(path, entries[0]))
+			entry = entries[0]
+			if entry in _known_archs and entry != expected_arch:
+				raise RuntimeError(
+					f"TinyTeX architecture mismatch: found '{entry}' but "
+					f"expected '{expected_arch}'. The wrong binary may have "
+					f"been downloaded."
+				)
+			return _resolve_path(os.path.join(path, entry))
 	except FileNotFoundError:
 		pass
 	raise RuntimeError(

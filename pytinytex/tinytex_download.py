@@ -15,6 +15,10 @@ logger = logging.getLogger("pytinytex")
 
 DEFAULT_TARGET_FOLDER = Path.home() / ".pytinytex"
 
+def _is_arm64():
+	"""Return True if running on an ARM64/aarch64 machine."""
+	return platform.machine().lower() in ("aarch64", "arm64")
+
 def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET_FOLDER, download_folder=None):
 	if variation not in [0, 1, 2]:
 		raise RuntimeError(
@@ -113,6 +117,14 @@ def _get_tinytex_urls(version, variation):
 		variation_txt = "TinyTeX-v"
 	tinytex_urls_list = {
 		url_frag for url_frag in tinytex_urls_list if variation_txt in url_frag
+	}
+	# Filter by architecture: TinyTeX releases include separate arm64 tarballs
+	# (e.g. "TinyTeX-0-arm64-v2026.03.02.tar.gz") alongside x86_64 ones.
+	# Without filtering, both map to the "linux" key and one overwrites the other.
+	arm64 = _is_arm64()
+	tinytex_urls_list = {
+		url_frag for url_frag in tinytex_urls_list
+		if arm64 == ("arm64" in url_frag)
 	}
 	tinytex_urls = {
 		ext2platform[url_frag[-3:]]: ("https://github.com" + url_frag)
