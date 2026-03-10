@@ -18,7 +18,9 @@ def download_tinytex(request):
 
 
 def cleanup():
-	shutil.rmtree(os.path.join("tests", "tinytex_distribution"))
+	if os.path.isdir(TINYTEX_DISTRIBUTION):
+		shutil.rmtree(TINYTEX_DISTRIBUTION)
 	for item in os.listdir("tests"):
 		if item.endswith(".zip") or item.endswith(".tar.gz") or item.endswith(".tgz"):
 			os.remove(os.path.join("tests", item))
+	pytinytex.clear_path_cache()
