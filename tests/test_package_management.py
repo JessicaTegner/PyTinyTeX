@@ -4,14 +4,6 @@ import pytinytex
 from .utils import download_tinytex, TINYTEX_DISTRIBUTION  # noqa
 
 
-def _self_update_tlmgr():
-    """Update tlmgr itself so it doesn't refuse to run other commands."""
-    try:
-        pytinytex.update("--self")
-    except RuntimeError:
-        pass  # best-effort; may fail if already up to date or no network
-
-
 def test_list_installed(download_tinytex):  # noqa
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
     result = pytinytex.list_installed()
@@ -62,7 +54,6 @@ def test_search_returns_list(download_tinytex):  # noqa
 def test_install_and_remove(download_tinytex):  # noqa
     """Install a small package, verify it appears in list, then remove it."""
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
-    _self_update_tlmgr()
     # install a small package
     exit_code, _ = pytinytex.install("blindtext")
     assert exit_code == 0
@@ -89,14 +80,17 @@ def test_install_nonexistent_package(download_tinytex):  # noqa
     try:
         exit_code, output = pytinytex.install("this-package-does-not-exist-xyz-123")
         # If it didn't raise, the output should mention the package wasn't found
-        assert exit_code == 0 or "not found" in output.lower() or "unknown package" in output.lower()
+        assert (
+            exit_code == 0
+            or "not found" in output.lower()
+            or "unknown package" in output.lower()
+        )
     except RuntimeError:
         pass  # expected on most platforms
 
 
 def test_update(download_tinytex):  # noqa
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
-    _self_update_tlmgr()
     # update -all may fail transiently due to tlmgr internal errors on CI
     try:
         exit_code, output = pytinytex.update()

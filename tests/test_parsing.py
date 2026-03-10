@@ -3,9 +3,7 @@ import pytinytex
 
 def test_parse_tlmgr_list_machine_readable():
     output = (
-        "i collection-basic: 1 file, 4k\n"
-        "i amsmath: 12345 56k\n"
-        "  booktabs: 67890 12k\n"
+        "i collection-basic: 1 file, 4k\ni amsmath: 12345 56k\n  booktabs: 67890 12k\n"
     )
     result = pytinytex._parse_tlmgr_list(output)
     assert len(result) == 3
