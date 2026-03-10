@@ -3,6 +3,12 @@ import os
 import platform
 import sys
 import warnings
+from importlib.metadata import version as _metadata_version, PackageNotFoundError
+
+try:
+    __version__ = _metadata_version("PyTinyTeX")
+except PackageNotFoundError:
+    __version__ = "unknown"
 
 from .tinytex_download import download_tinytex, DEFAULT_TARGET_FOLDER  # noqa
 from .log_parser import LogEntry, ParsedLog, parse_log  # noqa
@@ -62,6 +68,7 @@ __all__ = [
     "doctor",
     "DoctorResult",
     "DoctorCheck",
+    "__version__",
 ]
 
 

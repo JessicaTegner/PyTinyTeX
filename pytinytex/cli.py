@@ -6,6 +6,8 @@ import argparse
 import logging
 import sys
 
+logger = logging.getLogger("pytinytex")
+
 
 class _CliFormatter(logging.Formatter):
     """Format INFO as just the message; other levels as 'LEVEL: message'."""
@@ -152,40 +154,26 @@ def main(argv=None):
                 return 1
 
         elif args.command == "install":
-            exit_code, output = pytinytex.install(args.package)
-            if output:
-                print(output)
+            pytinytex.install(args.package)
 
         elif args.command == "remove":
-            exit_code, output = pytinytex.remove(args.package)
-            if output:
-                print(output)
+            pytinytex.remove(args.package)
 
         elif args.command == "list":
-            packages = pytinytex.list_installed()
-            for pkg in packages:
-                marker = "i" if pkg.get("installed") else " "
-                detail = pkg.get("detail", "")
-                print(" %s %s  %s" % (marker, pkg["name"], detail))
+            pytinytex.list_installed(stream=True)
 
         elif args.command == "search":
-            results = pytinytex.search(args.query)
-            for pkg in results:
-                desc = pkg.get("description", pkg.get("detail", ""))
-                print("  %s  %s" % (pkg["name"], desc))
+            pytinytex.search(args.query, stream=True)
 
         elif args.command == "info":
-            info = pytinytex.info(args.package)
-            for key, value in info.items():
-                print("  %s: %s" % (key, value))
+            pytinytex.info(args.package, stream=True)
 
         elif args.command == "update":
-            exit_code, output = pytinytex.update(args.package)
-            if output:
-                print(output)
+            pytinytex.update(args.package)
 
         elif args.command == "version":
-            print(pytinytex.get_version())
+            logger.info("pytinytex " + pytinytex.__version__)
+            pytinytex.get_version()
 
         elif args.command == "doctor":
             result = pytinytex.doctor()
