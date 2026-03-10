@@ -59,51 +59,70 @@ def remove(package):
     return result
 
 
-def list_installed():
+def list_installed(stream=False):
     """List all installed TeX Live packages.
 
+    Args:
+            stream: If True, stream output line-by-line via the logger
+                    instead of returning parsed data.
+
     Returns:
-            List of dicts with keys such as 'name', 'installed', 'detail'.
+            List of dicts with keys such as 'name', 'installed', 'detail',
+            or the raw output string if stream is True.
     """
     from . import get_tinytex_path
 
     path = get_tinytex_path()
-    _, output = _run_tlmgr_command(["list", "--only-installed"], path, True)
-    return _parse_tlmgr_list(output)
+    _, output = _run_tlmgr_command(
+        ["list", "--only-installed"], path, False, stream=stream
+    )
+    if not stream:
+        return _parse_tlmgr_list(output)
+    return output
 
 
-def search(query):
+def search(query, stream=False):
     """Search for TeX Live packages matching a query.
 
     Args:
             query: Search term (package name or keyword).
+            stream: If True, stream output line-by-line via the logger
+                    instead of returning parsed data.
 
     Returns:
-            List of dicts with keys such as 'name', 'description'.
+            List of dicts with keys such as 'name', 'description',
+            or the raw output string if stream is True.
     """
     from . import get_tinytex_path
 
     path = get_tinytex_path()
-    _, output = _run_tlmgr_command(["search", query], path, True)
-    return _parse_tlmgr_list(output)
+    _, output = _run_tlmgr_command(["search", query], path, False, stream=stream)
+    if not stream:
+        return _parse_tlmgr_list(output)
+    return output
 
 
-def info(package):
+def info(package, stream=False):
     """Get detailed information about a TeX Live package.
 
     Args:
             package: Package name.
+            stream: If True, stream output line-by-line via the logger
+                    instead of returning parsed data.
 
     Returns:
             Dict with package metadata (keys vary by package, but typically
             include 'package', 'revision', 'cat-version', 'category',
-            'shortdesc', 'longdesc', 'installed', 'sizes', etc.).
+            'shortdesc', 'longdesc', 'installed', 'sizes', etc.),
+            or the raw output string if stream is True.
     """
     from . import get_tinytex_path
 
     path = get_tinytex_path()
-    _, output = _run_tlmgr_command(["info", package], path, True)
-    return _parse_tlmgr_info(output)
+    _, output = _run_tlmgr_command(["info", package], path, False, stream=stream)
+    if not stream:
+        return _parse_tlmgr_info(output)
+    return output
 
 
 def update(package="-all"):
@@ -291,7 +310,7 @@ def _refresh_filename_db(path):
 
 
 def _run_tlmgr_command(
-    args, path, machine_readable=True, interactive=False, _retried=False
+    args, path, machine_readable=True, interactive=False, stream=None, _retried=False
 ):
     original_args = list(args)  # save before mutation
     from . import _find_file
@@ -325,7 +344,12 @@ def _run_tlmgr_command(
             # partially succeeds.  Continue with the retry regardless.
             logger.warning("tlmgr self-update returned an error, continuing anyway")
         return _run_tlmgr_command(
-            original_args, path, machine_readable, interactive, _retried=True
+            original_args,
+            path,
+            machine_readable,
+            interactive,
+            stream=stream,
+            _retried=True,
         )
 
     if interactive:
@@ -342,10 +366,15 @@ def _run_tlmgr_command(
         creationflags=creation_flag,
     )
     output_lines = []
-    for raw_line in proc.stdout:
+    while True:
+        raw_line = proc.stdout.readline()
+        if not raw_line:
+            break
         line = raw_line.decode("utf-8", errors="replace").rstrip()
         output_lines.append(line)
-        logger.info(line)
+        should_stream = stream if stream is not None else not machine_readable
+        if should_stream:
+            logger.info(line)
     proc.wait()
     output = "\n".join(output_lines)
 
