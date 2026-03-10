@@ -9,6 +9,14 @@ import pytinytex
 from .utils import download_tinytex, TINYTEX_DISTRIBUTION  # noqa
 
 
+def _self_update_tlmgr():
+	"""Update tlmgr itself so it doesn't refuse to run other commands."""
+	try:
+		pytinytex.update("--self")
+	except RuntimeError:
+		pass  # best-effort; may fail if already up to date or no network
+
+
 @pytest.fixture
 def simple_tex():
 	"""Create a simple .tex file in a temp directory."""
@@ -182,6 +190,7 @@ def test_compile_end_to_end_xelatex(download_tinytex, simple_tex):  # noqa
 def test_compile_auto_install_missing_package(download_tinytex):  # noqa
 	"""Verify auto_install=True finds, installs, and retries for a missing package."""
 	pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
+	_self_update_tlmgr()
 
 	# First, make sure blindtext is NOT installed
 	try:

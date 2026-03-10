@@ -18,6 +18,17 @@ def _is_arm64():
 	"""Return True if running on an ARM64/aarch64 machine."""
 	return platform.machine().lower() in ("aarch64", "arm64")
 
+def _default_progress(downloaded, total):
+	"""Print download progress on a TTY."""
+	if total > 0:
+		pct = downloaded * 100 // total
+		mb = downloaded / (1024 * 1024)
+		mb_total = total / (1024 * 1024)
+		sys.stdout.write("\rDownloading TinyTeX: %.1f/%.1f MB (%d%%)" % (mb, mb_total, pct))
+		sys.stdout.flush()
+		if downloaded >= total:
+			sys.stdout.write("\n")
+
 def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET_FOLDER, download_folder=None, progress_callback=None):
 	if variation not in [0, 1, 2]:
 		raise RuntimeError(
@@ -32,6 +43,8 @@ def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET
 			"'latest' for the latest available version, or year.month, for example: "
 			"'2024.12', '2024.09' for a specific version.".format(version)
 		)
+	if progress_callback is None and sys.stdout.isatty():
+		progress_callback = _default_progress
 	variation = str(variation)
 	pf = sys.platform
 	if pf.startswith("linux"):

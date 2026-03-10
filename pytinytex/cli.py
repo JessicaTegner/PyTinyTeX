@@ -158,22 +158,11 @@ def main(argv=None):
 				return 1
 
 		elif args.command == "download":
-			def _progress(downloaded, total):
-				if total > 0:
-					pct = downloaded * 100 // total
-					mb_down = downloaded / (1024 * 1024)
-					mb_total = total / (1024 * 1024)
-					sys.stdout.write(
-						"\r  Downloading: %.1f/%.1f MB (%d%%)" % (mb_down, mb_total, pct)
-					)
-					sys.stdout.flush()
-
 			pytinytex.download_tinytex(
 				version=getattr(args, "version", "latest"),
 				variation=args.variation,
-				progress_callback=_progress,
 			)
-			print("\nDone.")
+			print("Done.")
 
 		elif args.command == "uninstall":
 			pytinytex.uninstall(args.path)
