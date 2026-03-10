@@ -1,6 +1,11 @@
 name: Continuous Integration
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+    branches: [master]
 
 defaults:
   run:
