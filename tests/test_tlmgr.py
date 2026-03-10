@@ -3,7 +3,7 @@
 import pytest
 
 import pytinytex
-from pytinytex.tlmgr import _needs_self_update, _run_tlmgr_command
+from pytinytex.tlmgr import _needs_self_update
 from .utils import download_tinytex, TINYTEX_DISTRIBUTION  # noqa
 
 

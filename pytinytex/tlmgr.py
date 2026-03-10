@@ -271,9 +271,7 @@ def _refresh_filename_db(path):
     creation_flag = 0x08000000 if sys.platform == "win32" else 0
     logger.debug("Refreshing TeX filename database: %s", mktexlsr)
     try:
-        asyncio.run(
-            _run_command(mktexlsr, env=new_env, creationflags=creation_flag)
-        )
+        asyncio.run(_run_command(mktexlsr, env=new_env, creationflags=creation_flag))
     except RuntimeError:
         logger.debug("mktexlsr failed, continuing anyway")
 
