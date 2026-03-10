@@ -118,13 +118,15 @@ def _get_tinytex_urls(version, variation):
 	tinytex_urls_list = {
 		url_frag for url_frag in tinytex_urls_list if variation_txt in url_frag
 	}
-	# Filter by architecture: TinyTeX releases include separate arm64 tarballs
-	# (e.g. "TinyTeX-0-arm64-v2026.03.02.tar.gz") alongside x86_64 ones.
-	# Without filtering, both map to the "linux" key and one overwrites the other.
+	# Filter Linux tar.gz URLs by architecture: TinyTeX releases include
+	# separate arm64 tarballs (e.g. "TinyTeX-0-arm64-v2026.03.02.tar.gz")
+	# alongside x86_64 ones.  Both end in .tar.gz and would map to the same
+	# "linux" dict key.  Only apply this filter to .tar.gz (Linux) URLs —
+	# macOS .tgz and Windows .zip are unaffected.
 	arm64 = _is_arm64()
 	tinytex_urls_list = {
 		url_frag for url_frag in tinytex_urls_list
-		if arm64 == ("arm64" in url_frag)
+		if not url_frag.endswith(".tar.gz") or arm64 == ("arm64" in url_frag)
 	}
 	tinytex_urls = {
 		ext2platform[url_frag[-3:]]: ("https://github.com" + url_frag)
