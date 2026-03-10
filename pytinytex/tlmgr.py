@@ -310,9 +310,17 @@ def _run_tlmgr_command(
             logger.warning(
                 "tlmgr requires self-update. Running 'tlmgr update --self'..."
             )
-            _run_tlmgr_command(
-                ["update", "--self"], path, machine_readable=False, _retried=True
-            )
+            try:
+                _run_tlmgr_command(
+                    ["update", "--self"],
+                    path,
+                    machine_readable=False,
+                    _retried=True,
+                )
+            except RuntimeError:
+                # update --self may exit non-zero on Windows even when it
+                # partially succeeds.  Continue with the retry regardless.
+                logger.warning("tlmgr self-update returned an error, continuing anyway")
             return _run_tlmgr_command(
                 original_args, path, machine_readable, interactive, _retried=True
             )
