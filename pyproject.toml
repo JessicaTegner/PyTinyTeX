@@ -20,7 +20,6 @@ classifiers = [
     "Topic :: Utilities",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -34,8 +33,8 @@ classifiers = [
 requires-python = ">=3.8"
 dependencies = []
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.3.4",
     "ruff>=0.9.7",
 ]
