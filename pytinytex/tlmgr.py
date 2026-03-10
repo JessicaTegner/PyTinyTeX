@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -271,8 +272,18 @@ def _refresh_filename_db(path):
     creation_flag = 0x08000000 if sys.platform == "win32" else 0
     logger.debug("Refreshing TeX filename database: %s", mktexlsr)
     try:
-        asyncio.run(_run_command(mktexlsr, env=new_env, creationflags=creation_flag))
-    except RuntimeError:
+        proc = subprocess.Popen(
+            [mktexlsr],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            env=new_env,
+            creationflags=creation_flag,
+        )
+        for raw_line in proc.stdout:
+            logger.debug(raw_line.decode("utf-8", errors="replace").rstrip())
+        proc.wait()
+    except Exception:
         logger.debug("mktexlsr failed, continuing anyway")
 
 
@@ -317,21 +328,33 @@ def _run_tlmgr_command(
             original_args, path, machine_readable, interactive, _retried=True
         )
 
-    try:
-        exit_code, output = asyncio.run(
-            _run_command(
-                *args, stdin=interactive, env=new_env, creationflags=creation_flag
-            )
+    if interactive:
+        return asyncio.run(
+            _run_command(*args, stdin=True, env=new_env, creationflags=creation_flag)
         )
-        # On Windows, tlmgr may exit 0 but print the self-update warning
-        # and silently skip the requested operation.
-        if not _retried and not is_self_update and _needs_self_update(output):
-            return _do_self_update_and_retry()
-        return exit_code, output
-    except RuntimeError as e:
-        if not _retried and not is_self_update and _needs_self_update(str(e)):
-            return _do_self_update_and_retry()
-        raise
+
+    proc = subprocess.Popen(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL,
+        env=new_env,
+        creationflags=creation_flag,
+    )
+    output_lines = []
+    for raw_line in proc.stdout:
+        line = raw_line.decode("utf-8", errors="replace").rstrip()
+        output_lines.append(line)
+        logger.info(line)
+    proc.wait()
+    output = "\n".join(output_lines)
+
+    if _needs_self_update(output) and not is_self_update and not _retried:
+        return _do_self_update_and_retry()
+
+    if proc.returncode != 0:
+        raise RuntimeError(f"Error running command: {output}")
+    return proc.returncode, output
 
 
 async def _read_stdout(process, output_buffer):
