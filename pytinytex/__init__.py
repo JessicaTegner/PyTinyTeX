@@ -158,7 +158,16 @@ def uninstall(path=None):
 	# but the user likely means the top-level .pytinytex folder.
 	target = Path(path)
 	default = Path(DEFAULT_TARGET_FOLDER)
-	if default.exists() and target.is_relative_to(default):
+	try:
+		is_under_default = default.exists() and target.is_relative_to(default)
+	except AttributeError:
+		# Path.is_relative_to() was added in Python 3.9
+		try:
+			target.relative_to(default)
+			is_under_default = default.exists()
+		except ValueError:
+			is_under_default = False
+	if is_under_default:
 		target = default
 	if target.exists():
 		shutil.rmtree(target)
