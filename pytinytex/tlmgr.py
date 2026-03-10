@@ -36,7 +36,9 @@ def install(package):
     from . import get_tinytex_path
 
     path = get_tinytex_path()
-    return _run_tlmgr_command(["install", package], path, False)
+    result = _run_tlmgr_command(["install", package], path, False)
+    _refresh_filename_db(path)
+    return result
 
 
 def remove(package):
@@ -51,7 +53,9 @@ def remove(package):
     from . import get_tinytex_path
 
     path = get_tinytex_path()
-    return _run_tlmgr_command(["remove", package], path, False)
+    result = _run_tlmgr_command(["remove", package], path, False)
+    _refresh_filename_db(path)
+    return result
 
 
 def list_installed():
@@ -252,6 +256,26 @@ def _parse_tlmgr_info(output):
         elif current_key and line[0].isspace():
             info[current_key] += " " + line.strip()
     return info
+
+
+def _refresh_filename_db(path):
+    """Run mktexlsr to refresh the TeX filename database after install/remove."""
+    from . import _find_file
+
+    mktexlsr = _find_file(path, "mktexlsr")
+    if not mktexlsr:
+        logger.debug("mktexlsr not found, skipping filename database refresh")
+        return
+    mktexlsr = str(Path(mktexlsr).resolve(True))
+    new_env = os.environ.copy()
+    creation_flag = 0x08000000 if sys.platform == "win32" else 0
+    logger.debug("Refreshing TeX filename database: %s", mktexlsr)
+    try:
+        asyncio.run(
+            _run_command(mktexlsr, env=new_env, creationflags=creation_flag)
+        )
+    except RuntimeError:
+        logger.debug("mktexlsr failed, continuing anyway")
 
 
 # --- Command runner ---
