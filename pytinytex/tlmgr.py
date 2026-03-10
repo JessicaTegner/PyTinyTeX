@@ -298,32 +298,39 @@ def _run_tlmgr_command(
     creation_flag = 0x08000000 if sys.platform == "win32" else 0
 
     logger.debug("Running command: %s", args)
+    is_self_update = "update" in original_args and "--self" in original_args
+
+    def _do_self_update_and_retry():
+        logger.warning("tlmgr requires self-update. Running 'tlmgr update --self'...")
+        try:
+            _run_tlmgr_command(
+                ["update", "--self"],
+                path,
+                machine_readable=False,
+                _retried=True,
+            )
+        except RuntimeError:
+            # update --self may exit non-zero on Windows even when it
+            # partially succeeds.  Continue with the retry regardless.
+            logger.warning("tlmgr self-update returned an error, continuing anyway")
+        return _run_tlmgr_command(
+            original_args, path, machine_readable, interactive, _retried=True
+        )
+
     try:
-        return asyncio.run(
+        exit_code, output = asyncio.run(
             _run_command(
                 *args, stdin=interactive, env=new_env, creationflags=creation_flag
             )
         )
+        # On Windows, tlmgr may exit 0 but print the self-update warning
+        # and silently skip the requested operation.
+        if not _retried and not is_self_update and _needs_self_update(output):
+            return _do_self_update_and_retry()
+        return exit_code, output
     except RuntimeError as e:
-        is_self_update = "update" in original_args and "--self" in original_args
         if not _retried and not is_self_update and _needs_self_update(str(e)):
-            logger.warning(
-                "tlmgr requires self-update. Running 'tlmgr update --self'..."
-            )
-            try:
-                _run_tlmgr_command(
-                    ["update", "--self"],
-                    path,
-                    machine_readable=False,
-                    _retried=True,
-                )
-            except RuntimeError:
-                # update --self may exit non-zero on Windows even when it
-                # partially succeeds.  Continue with the retry regardless.
-                logger.warning("tlmgr self-update returned an error, continuing anyway")
-            return _run_tlmgr_command(
-                original_args, path, machine_readable, interactive, _retried=True
-            )
+            return _do_self_update_and_retry()
         raise
 
 
