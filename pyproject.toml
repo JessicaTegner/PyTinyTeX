@@ -34,6 +34,9 @@ classifiers = [
 requires-python = ">=3.8"
 dependencies = []
 
+[project.scripts]
+pytinytex = "pytinytex.cli:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.4",

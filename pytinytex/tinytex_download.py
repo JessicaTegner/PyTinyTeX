@@ -1,5 +1,4 @@
 import logging
-import os
 import platform
 import re
 import shutil
@@ -19,7 +18,18 @@ def _is_arm64():
 	"""Return True if running on an ARM64/aarch64 machine."""
 	return platform.machine().lower() in ("aarch64", "arm64")
 
-def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET_FOLDER, download_folder=None):
+def _default_progress(downloaded, total):
+	"""Print download progress on a TTY."""
+	if total > 0:
+		pct = downloaded * 100 // total
+		mb = downloaded / (1024 * 1024)
+		mb_total = total / (1024 * 1024)
+		sys.stdout.write("\rDownloading TinyTeX: %.1f/%.1f MB (%d%%)" % (mb, mb_total, pct))
+		sys.stdout.flush()
+		if downloaded >= total:
+			sys.stdout.write("\n")
+
+def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET_FOLDER, download_folder=None, progress_callback=None):
 	if variation not in [0, 1, 2]:
 		raise RuntimeError(
 			"Invalid TinyTeX variation {}. Valid variations are 0, 1, 2.".format(variation)
@@ -33,6 +43,8 @@ def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET
 			"'latest' for the latest available version, or year.month, for example: "
 			"'2024.12', '2024.09' for a specific version.".format(version)
 		)
+	if progress_callback is None and sys.stdout.isatty():
+		progress_callback = _default_progress
 	variation = str(variation)
 	pf = sys.platform
 	if pf.startswith("linux"):
@@ -60,8 +72,17 @@ def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET
 	else:
 		logger.info("* Downloading TinyTeX from %s ...", url)
 		response = urlopen(url)
+		total_size = int(response.headers.get("Content-Length", 0))
 		with open(filename, 'wb') as out_file:
-			shutil.copyfileobj(response, out_file)
+			downloaded = 0
+			while True:
+				chunk = response.read(8192)
+				if not chunk:
+					break
+				out_file.write(chunk)
+				downloaded += len(chunk)
+				if progress_callback:
+					progress_callback(downloaded, total_size)
 		logger.info("* Downloaded TinyTeX, saved in %s ...", filename)
 
 	logger.info("Extracting %s to a temporary folder...", filename)
@@ -81,12 +102,9 @@ def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET
 		tinytex_extracted = tmpdirname / extracted_dir_name
 		logger.info("Copying TinyTeX to %s...", target_folder)
 		shutil.copytree(tinytex_extracted, target_folder, dirs_exist_ok=True)
-	# Resolve the bin directory and add it to the OS PATH for this process
-	folder_to_add_to_path = target_folder / "bin"
-	while len(list(folder_to_add_to_path.glob("*"))) == 1 and folder_to_add_to_path.is_dir():
-		folder_to_add_to_path = list(folder_to_add_to_path.glob("*"))[0]
-	logger.info("Adding TinyTeX to PATH (%s)...", folder_to_add_to_path)
-	os.environ["PATH"] = str(folder_to_add_to_path) + os.pathsep + os.environ.get("PATH", "")
+	# Resolve the path and add to PATH so everything is ready to use
+	from . import ensure_tinytex_installed
+	ensure_tinytex_installed(target_folder)
 	logger.info("Done")
 
 def _get_tinytex_urls(version, variation):
