@@ -1,5 +1,4 @@
 import logging
-import os
 import platform
 import re
 import shutil
@@ -90,12 +89,9 @@ def download_tinytex(version="latest", variation=1, target_folder=DEFAULT_TARGET
 		tinytex_extracted = tmpdirname / extracted_dir_name
 		logger.info("Copying TinyTeX to %s...", target_folder)
 		shutil.copytree(tinytex_extracted, target_folder, dirs_exist_ok=True)
-	# Resolve the bin directory and add it to the OS PATH for this process
-	folder_to_add_to_path = target_folder / "bin"
-	while len(list(folder_to_add_to_path.glob("*"))) == 1 and folder_to_add_to_path.is_dir():
-		folder_to_add_to_path = list(folder_to_add_to_path.glob("*"))[0]
-	logger.info("Adding TinyTeX to PATH (%s)...", folder_to_add_to_path)
-	os.environ["PATH"] = str(folder_to_add_to_path) + os.pathsep + os.environ.get("PATH", "")
+	# Resolve the path and add to PATH so everything is ready to use
+	from . import ensure_tinytex_installed
+	ensure_tinytex_installed(target_folder)
 	logger.info("Done")
 
 def _get_tinytex_urls(version, variation):
