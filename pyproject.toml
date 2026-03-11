@@ -38,6 +38,12 @@ classifiers = [
 requires-python = ">=3.8"
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/JessicaTegner/PyTinyTeX"
+Repository = "https://github.com/JessicaTegner/PyTinyTeX"
+"Bug Tracker" = "https://github.com/JessicaTegner/PyTinyTeX/issues"
+Changelog = "https://github.com/JessicaTegner/PyTinyTeX/releases"
+
 [project.scripts]
 pytinytex = "pytinytex.cli:main"
 
