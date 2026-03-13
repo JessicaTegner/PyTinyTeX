@@ -149,11 +149,9 @@ def compile(
                     continue
                 logger.info("Auto-installing missing package: %s", pkg)
                 try:
-                    # Try to find the correct TeX Live package name
-                    pkg_name = _resolve_package_name(pkg)
-                    install(pkg_name)
-                    newly_installed.append(pkg_name)
-                    all_installed.append(pkg_name)
+                    install(pkg)
+                    newly_installed.append(pkg)
+                    all_installed.append(pkg)
                 except RuntimeError as e:
                     logger.warning("Failed to install '%s': %s", pkg, e)
 
@@ -171,32 +169,3 @@ def compile(
     return result
 
 
-def _resolve_package_name(sty_name):
-    """Try to resolve a .sty file name to a TeX Live package name.
-
-    For most packages, the .sty name matches the package name.
-    Falls back to the sty_name itself if tlmgr search fails.
-    """
-    from . import get_tinytex_path
-    from .tlmgr import _run_tlmgr_command
-
-    try:
-        path = get_tinytex_path()
-        _, output = _run_tlmgr_command(
-            ["search", "--file", sty_name + ".sty"],
-            path,
-            machine_readable=False,
-        )
-        # Parse tlmgr search output for package names
-        # Lines look like: "texmf-dist/tex/latex/booktabs/booktabs.sty"
-        # or "<package>:" header lines
-        for line in output.splitlines():
-            line = line.strip()
-            if line.endswith(":") and not line.startswith(" "):
-                # This is a package name header
-                return line.rstrip(":")
-    except RuntimeError:
-        pass
-
-    # Fallback: assume sty name == package name
-    return sty_name
