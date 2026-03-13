@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "PyTinyTeX"
-version = "0.5.0"
+version = "0.5.1"
 description = "Thin wrapper for \"TinyTeX\" (MIT)"
 license = {text = "MIT"}
 authors = [{name = "JessicaTegner", email = "jessica@jessicategner.com"}]
