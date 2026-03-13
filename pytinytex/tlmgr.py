@@ -28,8 +28,13 @@ def _needs_self_update(error_message):
 def install(package):
     """Install a TeX Live package via tlmgr.
 
+    If the direct install fails, attempts to resolve the package name
+    (e.g. mapping a .sty file name to the correct TeX Live package)
+    and retries.
+
     Args:
-            package: Package name (e.g. "booktabs", "amsmath").
+            package: Package name (e.g. "booktabs", "amsmath") or a .sty
+                    file stem that will be resolved to the correct package.
 
     Returns:
             Tuple of (exit_code, output).
@@ -37,9 +42,21 @@ def install(package):
     from . import get_tinytex_path
 
     path = get_tinytex_path()
-    result = _run_tlmgr_command(["install", package], path, False)
-    _refresh_filename_db(path)
-    return result
+    try:
+        result = _run_tlmgr_command(["install", package], path, False)
+        _refresh_filename_db(path)
+        return result
+    except RuntimeError:
+        # Try resolving the name (e.g. .sty name -> tlmgr package name)
+        resolved = _resolve_package_name(package, path)
+        if resolved != package:
+            logger.info(
+                "Resolved '%s' to package '%s', retrying install", package, resolved
+            )
+            result = _run_tlmgr_command(["install", resolved], path, False)
+            _refresh_filename_db(path)
+            return result
+        raise
 
 
 def remove(package):
@@ -206,6 +223,48 @@ def uninstall(path=None):
         shutil.rmtree(target)
         logger.info("Removed TinyTeX installation at %s", target)
     clear_path_cache()
+
+
+# --- Package name resolution ---
+
+
+def _resolve_package_name(sty_name, path=None):
+    """Try to resolve a .sty file name to a TeX Live package name.
+
+    For most packages, the .sty name matches the package name.
+    Falls back to the sty_name itself if tlmgr search fails.
+
+    Args:
+            sty_name: The stem of a .sty file (e.g. "booktabs").
+            path: TinyTeX bin path. Resolved automatically if None.
+
+    Returns:
+            The TeX Live package name, or sty_name as a fallback.
+    """
+    if path is None:
+        from . import get_tinytex_path
+
+        path = get_tinytex_path()
+
+    try:
+        _, output = _run_tlmgr_command(
+            ["search", "--file", sty_name + ".sty"],
+            path,
+            machine_readable=False,
+        )
+        # Parse tlmgr search output for package names
+        # Lines look like: "texmf-dist/tex/latex/booktabs/booktabs.sty"
+        # or "<package>:" header lines
+        for line in output.splitlines():
+            line = line.strip()
+            if line.endswith(":") and not line.startswith(" "):
+                # This is a package name header
+                return line.rstrip(":")
+    except RuntimeError:
+        pass
+
+    # Fallback: assume sty name == package name
+    return sty_name
 
 
 # --- Machine-readable output parsing ---
