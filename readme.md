@@ -2,9 +2,12 @@
 
 ![Build Status](https://github.com/JessicaTegner/PyTinyTeX/actions/workflows/ci.yaml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/pytinytex.svg)](https://pypi.python.org/pypi/PyTinyTeX/)
+![PyTinyTeX PyPi Downloads](https://img.shields.io/pypi/dm/pytinytex)
+[![conda version](https://anaconda.org/conda-forge/pytinytex/badges/version.svg)](https://anaconda.org/conda-forge/pytinytex/)
 [![Development Status](https://img.shields.io/pypi/status/PyTinyTeX.svg)](https://pypi.python.org/pypi/PyTinyTeX/)
 [![Python version](https://img.shields.io/pypi/pyversions/PyTinyTeX.svg)](https://pypi.python.org/pypi/PyTinyTeX/)
 ![License](https://img.shields.io/pypi/l/PyTinyTeX.svg)
+
 
 The easiest way to go from `.tex` to `.pdf` in Python. PyTinyTeX wraps [TinyTeX](https://yihui.org/tinytex) — a lightweight, cross-platform, portable LaTeX distribution based on TeX Live — and gives you compilation, package management, and diagnostics from Python or the command line.
 
