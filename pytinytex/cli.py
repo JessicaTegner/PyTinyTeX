@@ -96,13 +96,14 @@ def main(argv=None):
     p_download = sub.add_parser("download", help="Download TinyTeX")
     p_download.add_argument(
         "--variation",
-        type=int,
-        default=1,
-        choices=[0, 1, 2],
-        help="TinyTeX variation (default: 1)",
+        default="1",
+        choices=["0", "1", "2", "none"],
+        help="TinyTeX variation: 0, 1, 2 or none (default: 1)",
     )
     p_download.add_argument(
-        "--version", default="latest", help="TinyTeX version (default: latest)"
+        "--version",
+        default="latest",
+        help="TinyTeX version: latest, daily or year.month (default: latest)",
     )
 
     # uninstall
@@ -189,7 +190,7 @@ def main(argv=None):
         elif args.command == "download":
             pytinytex.download_tinytex(
                 version=getattr(args, "version", "latest"),
-                variation=args.variation,
+                variation=None if args.variation == "none" else int(args.variation),
             )
             print("Done.")
 

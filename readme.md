@@ -41,11 +41,12 @@ import pytinytex
 # Download the default variation (variation 1: ~90 common LaTeX packages)
 pytinytex.download_tinytex()
 
-# Or pick a variation:
-#   0 — infrastructure only, no packages
-#   1 — common packages (default)
-#   2 — extended package set
-pytinytex.download_tinytex(variation=2)
+# Or pick a variation (numbers match the TinyTeX release names):
+#   0    — TinyTeX-0: infrastructure only, no packages
+#   1    — TinyTeX-1: common packages (default)
+#   None — TinyTeX: community-requested packages
+#   2    — TinyTeX-2: full TeX Live (~1.7 GB, daily release only)
+pytinytex.download_tinytex(variation=None)
 
 # Track download progress
 pytinytex.download_tinytex(progress_callback=lambda downloaded, total: print(f"{downloaded}/{total} bytes"))
@@ -167,7 +168,7 @@ Every feature is also available from the terminal:
 ```bash
 # Download TinyTeX
 pytinytex download
-pytinytex download --variation 2
+pytinytex download --variation none
 
 # Compile a document
 pytinytex compile paper.tex
