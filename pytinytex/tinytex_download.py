@@ -1,3 +1,4 @@
+import glob
 import logging
 import platform
 import re
@@ -19,6 +20,11 @@ DEFAULT_TARGET_FOLDER = Path.home() / ".pytinytex"
 def _is_arm64():
     """Return True if running on an ARM64/aarch64 machine."""
     return platform.machine().lower() in ("aarch64", "arm64")
+
+
+def _is_musl():
+    """Return True if running on a musl-based Linux (e.g. Alpine)."""
+    return bool(glob.glob("/lib/ld-musl-*.so.1"))
 
 
 def _default_progress(downloaded, total):
@@ -160,7 +166,9 @@ def _get_tinytex_urls(version, variation):
         r"\.(?:tar\.gz|tar\.xz|tgz|zip|exe)"
     )
     tinytex_urls_list = regex.findall(content.decode("utf-8"))
-    tinytex_urls = _select_tinytex_urls(tinytex_urls_list, variation, _is_arm64())
+    tinytex_urls = _select_tinytex_urls(
+        tinytex_urls_list, variation, _is_arm64(), _is_musl()
+    )
     return tinytex_urls, version
 
 
@@ -171,15 +179,15 @@ _ASSET_RE = re.compile(
 )
 
 
-def _select_tinytex_urls(asset_paths, variation, arm64):
+def _select_tinytex_urls(asset_paths, variation, arm64, musl=False):
     """Map release asset paths to {sys.platform: url} for the given variation.
 
     Handles both the naming used up to v2026.03.02
     (``TinyTeX-1[-arm64]-v2026.03.tar.gz`` / ``.tgz`` / ``.zip``) and the
     naming used since (``TinyTeX-1-linux-arm64-v2026.04.tar.xz`` /
-    ``TinyTeX-1-windows-v2026.04.exe``).  Legacy archives win when both exist.
+    ``TinyTeX-1-windows-v2026.04.exe``).  Legacy archives win when both exist,
+    except on musl where the dedicated musl build (new naming only) is used.
     """
-    # ponytail: no musl detection, glibc x86_64 asset is always picked on Linux
     new_style, old_style = {}, {}
     for path in asset_paths:
         m = _ASSET_RE.match(path.split("/")[-1])
@@ -195,7 +203,9 @@ def _select_tinytex_urls(asset_paths, variation, arm64):
             new_style["win32"] = url
         elif os_name == "linux-arm64" and arm64:
             new_style["linux"] = url
-        elif os_name == "linux-x86_64" and not arm64:
+        elif os_name == "linux-x86_64" and not arm64 and not musl:
+            new_style["linux"] = url
+        elif os_name == "linuxmusl-x86_64" and not arm64 and musl:
             new_style["linux"] = url
         elif os_name is None:
             if ext == "zip":
@@ -204,4 +214,6 @@ def _select_tinytex_urls(asset_paths, variation, arm64):
                 old_style["darwin"] = url
             elif ext == "tar.gz" and arm64 == bool(arm_suffix):
                 old_style["linux"] = url
+    if musl and "linux" in new_style:
+        old_style.pop("linux", None)  # legacy tarballs are glibc-only
     return {**new_style, **old_style}

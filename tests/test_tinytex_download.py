@@ -121,6 +121,25 @@ def test_select_urls_new_naming():
     assert sel(_ASSETS_2026_08, 2, arm64=False) == {}
 
 
+def test_select_urls_musl():
+    sel = pytinytex.tinytex_download._select_tinytex_urls
+    assert _names(sel(_ASSETS_2026_08, 1, arm64=False, musl=True))["linux"] == (
+        "TinyTeX-1-linuxmusl-x86_64-v2026.08.tar.xz"
+    )
+    # legacy glibc tarball must not override the musl build
+    assert _names(sel(_ASSETS_2026_08, None, arm64=False, musl=True))["linux"] == (
+        "TinyTeX-linuxmusl-x86_64-v2026.08.tar.xz"
+    )
+    # no musl arm64 build upstream: fall back to glibc arm64
+    assert _names(sel(_ASSETS_2026_08, 1, arm64=True, musl=True))["linux"] == (
+        "TinyTeX-1-linux-arm64-v2026.08.tar.xz"
+    )
+    # old releases have no musl build: fall back to glibc
+    assert _names(sel(_ASSETS_2026_03, 0, arm64=False, musl=True))["linux"] == (
+        "TinyTeX-0-v2026.03.02.tar.gz"
+    )
+
+
 def test_select_urls_daily_variation_2():
     sel = pytinytex.tinytex_download._select_tinytex_urls
     assert _names(sel(_ASSETS_DAILY, 2, arm64=True)) == {
