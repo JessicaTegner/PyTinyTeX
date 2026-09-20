@@ -3,6 +3,7 @@ import os
 import platform
 import sys
 import warnings
+from pathlib import Path
 from importlib.metadata import version as _metadata_version, PackageNotFoundError
 
 try:
@@ -74,6 +75,33 @@ __all__ = [
 
 # --- Path resolution ---
 
+_HOME = Path.home()
+
+
+def _xdg_data_home():
+    return Path(os.getenv("XDG_DATA_HOME", _HOME / ".local/share"))
+
+
+def _upstream_tinytex_dir():
+    """Return the default TinyTeX install directory used by the official
+    installer and by R's ``tinytex`` package (``install_tinytex``)."""
+    if sys.platform == "win32":
+        return Path(os.getenv("APPDATA", _HOME / "AppData/Roaming")) / "TinyTeX"
+    if sys.platform == "darwin":
+        return _HOME / "Library/TinyTeX"
+    return _HOME / ".TinyTeX"
+
+
+def candidate_tinytex_dirs():
+    """Return TinyTeX install directories to search, in priority order."""
+    return [
+        DEFAULT_TARGET_FOLDER,
+        _upstream_tinytex_dir(),
+        # The XDG Base Directory Specification gives users a standard place to
+        # keep an install; some move it there voluntarily.
+        _xdg_data_home() / "TinyTeX",
+    ]
+
 
 def get_tinytex_path(base=None):
     """Return the resolved path to the TinyTeX bin directory.
@@ -88,13 +116,12 @@ def get_tinytex_path(base=None):
     """
     if __tinytex_path:
         return __tinytex_path
-    path_to_resolve = DEFAULT_TARGET_FOLDER
     if base:
-        path_to_resolve = base
-    if os.environ.get("PYTINYTEX_TINYTEX"):
-        path_to_resolve = os.environ["PYTINYTEX_TINYTEX"]
-
-    ensure_tinytex_installed(path_to_resolve)
+        ensure_tinytex_installed(base)
+    elif os.getenv("PYTINYTEX_TINYTEX"):
+        ensure_tinytex_installed(os.environ["PYTINYTEX_TINYTEX"])
+    else:
+        ensure_tinytex_installed()
     return __tinytex_path
 
 
@@ -109,7 +136,7 @@ def ensure_tinytex_installed(path=None):
 
     Args:
             path: Path to check for TinyTeX. Defaults to the cached path or
-                    DEFAULT_TARGET_FOLDER.
+                    automatic discovery of an existing install.
 
     Returns:
             True if TinyTeX is installed.
@@ -119,9 +146,12 @@ def ensure_tinytex_installed(path=None):
                     ``download_tinytex()`` to install it first.
     """
     global __tinytex_path
-    if not path:
-        path = __tinytex_path or DEFAULT_TARGET_FOLDER
-    __tinytex_path = _resolve_path(path)
+    if path:
+        __tinytex_path = _find_resolved([path])
+    elif __tinytex_path:
+        return True
+    else:
+        __tinytex_path = _find_resolved(candidate_tinytex_dirs())
     # Ensure the resolved bin directory is on PATH for this process
     _add_to_path(__tinytex_path)
     return True
@@ -230,17 +260,19 @@ def _get_platform_arch():
     return arch_map.get(machine, machine + "-linux")
 
 
-def _resolve_path(path):
+def _attempt_resolve_path(path):
+    if not os.path.isdir(path):
+        return None  # early exit
     try:
         if _find_file(path, "tlmgr"):
             return path
         if os.path.isdir(os.path.join(path, "bin")):
-            return _resolve_path(os.path.join(path, "bin"))
+            return _attempt_resolve_path(os.path.join(path, "bin"))
         entries = [e for e in os.listdir(path) if os.path.isdir(os.path.join(path, e))]
         # Prefer the directory matching the current platform architecture
         expected_arch = _get_platform_arch()
         if expected_arch in entries:
-            return _resolve_path(os.path.join(path, expected_arch))
+            return _attempt_resolve_path(os.path.join(path, expected_arch))
         # Only fall back to a single entry if it's not an architecture mismatch
         _known_archs = {
             "x86_64-linux",
@@ -256,15 +288,27 @@ def _resolve_path(path):
                 raise RuntimeError(
                     f"TinyTeX architecture mismatch: found '{entry}' but "
                     f"expected '{expected_arch}'. The wrong binary may have "
-                    f"been downloaded."
+                    "been downloaded.\nYou can point at another installation "
+                    "with --tinytex / PYTINYTEX_TINYTEX."
                 )
-            return _resolve_path(os.path.join(path, entry))
+            return _attempt_resolve_path(os.path.join(path, entry))
     except FileNotFoundError:
         pass
+    return None
+
+
+def _find_resolved(candidates):
+    """Return the first resolvable TinyTeX path among candidates, else raise."""
+    assert len(candidates) > 0  # sanity check, removed by -O
+    found = next(filter(None, map(_attempt_resolve_path, candidates)), None)
+    if found:
+        return found
+    tried = "\n".join(f"  - {path}" for path in candidates)
     raise RuntimeError(
-        f"Unable to resolve TinyTeX path.\n"
-        f"Tried {path}.\n"
-        f"You can install TinyTeX using pytinytex.download_tinytex()"
+        "Unable to resolve TinyTeX path.\n"
+        f"Tried:\n{tried}\n"
+        "You can install TinyTeX using pytinytex.download_tinytex(), "
+        "or point at an existing install with --tinytex / PYTINYTEX_TINYTEX."
     )
 
 
