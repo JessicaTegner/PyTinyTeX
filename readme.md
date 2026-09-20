@@ -171,6 +171,7 @@ pytinytex download --variation 2
 
 # Compile a document
 pytinytex compile paper.tex
+pytinytex --tinytex /path/to/TinyTeX compile paper.tex
 pytinytex compile paper.tex --engine xelatex --runs 2 --auto-install
 
 # Package management
@@ -188,6 +189,27 @@ pytinytex version
 # Also works as a Python module
 python -m pytinytex doctor
 ```
+
+## Installing TinyTeX
+
+`pytinytex download` installs to `~/.pytinytex` by default. Pass `--tinytex`
+(or set `PYTINYTEX_TINYTEX`) to install elsewhere.
+
+```
+pytinytex download
+pytinytex --tinytex /path/to/TinyTeX download
+```
+
+## Finding an existing TinyTeX
+
+When no explicit path (`--tinytex` or `PYTINYTEX_TINYTEX`) is given, commands
+discover an existing install in this order:
+
+1. `~/.pytinytex` (the PyTinyTeX default)
+2. The default TinyTeX location used by the official installer and R's
+   `tinytex` package (macOS `~/Library/TinyTeX`, Windows `%APPDATA%/TinyTeX`,
+   Linux `~/.TinyTeX`)
+3. `$XDG_DATA_HOME/TinyTeX` (default `~/.local/share/TinyTeX`)
 
 ## Integrating with pypandoc
 

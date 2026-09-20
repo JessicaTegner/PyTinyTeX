@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 
 logger = logging.getLogger("pytinytex")
@@ -31,6 +32,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="pytinytex",
         description="Manage TinyTeX installations and compile LaTeX documents.",
+    )
+    parser.add_argument(
+        "--tinytex",
+        default=None,
+        help="Path to an existing TinyTeX install (equivalent to PYTINYTEX_TINYTEX environment variable)",
     )
     sub = parser.add_subparsers(dest="command")
 
@@ -114,6 +120,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     _setup_logging()
 
+    if args.tinytex:
+        os.environ["PYTINYTEX_TINYTEX"] = args.tinytex
+
     if not args.command:
         parser.print_help()
         return 1
@@ -187,9 +196,12 @@ def main(argv=None):
                 return 1
 
         elif args.command == "download":
+            target = args.tinytex or os.getenv("PYTINYTEX_TINYTEX")
+            download_kwargs = {"target_folder": target} if target else {}
             pytinytex.download_tinytex(
                 version=getattr(args, "version", "latest"),
                 variation=args.variation,
+                **download_kwargs,
             )
             print("Done.")
 
