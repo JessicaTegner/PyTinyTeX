@@ -24,6 +24,6 @@ def cleanup():
     if os.path.isdir(TINYTEX_DISTRIBUTION):
         shutil.rmtree(TINYTEX_DISTRIBUTION)
     for item in os.listdir("tests"):
-        if item.endswith(".zip") or item.endswith(".tar.gz") or item.endswith(".tgz"):
+        if item.endswith((".zip", ".tar.gz", ".tgz", ".tar.xz", ".exe")):
             os.remove(os.path.join("tests", item))
     pytinytex.clear_path_cache()
