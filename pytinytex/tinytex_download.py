@@ -78,8 +78,13 @@ def download_tinytex(
         if platform.architecture()[0] != "64bit":
             raise RuntimeError("Linux TinyTeX is only compiled for 64bit.")
     # get TinyTeX
-    tinytex_urls, _ = _get_tinytex_urls(version, variation)
+    tinytex_urls, version = _get_tinytex_urls(version, variation)
     if pf not in tinytex_urls:
+        if pf == "linux" and _is_musl():
+            raise RuntimeError(
+                f"No prebuilt TinyTeX variation {variation} for Linux "
+                f"{platform.machine()} (musl) in release {version}."
+            )
         raise RuntimeError(
             "Can't handle your platform (only Linux, Mac OS X, Windows)."
         )
@@ -201,7 +206,7 @@ def _select_tinytex_urls(asset_paths, variation, arm64, musl=False):
             new_style["darwin"] = url
         elif os_name == "windows":
             new_style["win32"] = url
-        elif os_name == "linux-arm64" and arm64:
+        elif os_name == "linux-arm64" and arm64 and not musl:
             new_style["linux"] = url
         elif os_name == "linux-x86_64" and not arm64 and not musl:
             new_style["linux"] = url
@@ -212,8 +217,6 @@ def _select_tinytex_urls(asset_paths, variation, arm64, musl=False):
                 old_style["win32"] = url
             elif ext == "tgz":
                 old_style["darwin"] = url
-            elif ext == "tar.gz" and arm64 == bool(arm_suffix):
+            elif ext == "tar.gz" and arm64 == bool(arm_suffix) and not musl:
                 old_style["linux"] = url
-    if musl and "linux" in new_style:
-        old_style.pop("linux", None)  # legacy tarballs are glibc-only
     return {**new_style, **old_style}
