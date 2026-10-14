@@ -56,7 +56,9 @@ def test_get_pdf_latex_engine_deprecated(download_tinytex):  # noqa
 
 def test_candidate_tinytex_dirs_order(monkeypatch):
     monkeypatch.setattr(pytinytex, "_xdg_data_home", lambda: Path("/tmp/xdg"))
-    monkeypatch.setattr(pytinytex, "_upstream_tinytex_dir", lambda: Path("/tmp/upstream"))
+    monkeypatch.setattr(
+        pytinytex, "_upstream_tinytex_dir", lambda: Path("/tmp/upstream")
+    )
     assert pytinytex.candidate_tinytex_dirs() == [
         pytinytex.DEFAULT_TARGET_FOLDER,
         Path("/tmp/upstream"),
@@ -94,11 +96,9 @@ def test_ensure_discovers_existing(monkeypatch, tmp_path):
     found = tmp_path / "tinytex"
     found.mkdir()
     (found / "bin").mkdir()
-    (found / "bin/tlmgr").write_text("")
+    (found / "bin/tlmgr").touch()
     missing = tmp_path / "missing"
-    monkeypatch.setattr(
-        pytinytex, "candidate_tinytex_dirs", lambda: [missing, found]
-    )
+    monkeypatch.setattr(pytinytex, "candidate_tinytex_dirs", lambda: [missing, found])
     assert pytinytex.ensure_tinytex_installed() is True
     assert pytinytex.__tinytex_path == os.fspath(found / "bin")
 
@@ -106,7 +106,9 @@ def test_ensure_discovers_existing(monkeypatch, tmp_path):
 def test_ensure_failure_lists_path(monkeypatch, tmp_path):
     pytinytex.clear_path_cache()
     rng = random.Random(0)
-    dirs = [tmp_path / "".join(rng.choices(string.ascii_lowercase, k=5)) for _ in range(10)]
+    dirs = [
+        tmp_path / "".join(rng.choices(string.ascii_lowercase, k=5)) for _ in range(10)
+    ]
     monkeypatch.setattr(pytinytex, "candidate_tinytex_dirs", lambda: dirs)
     with pytest.raises(RuntimeError, match="Unable to resolve TinyTeX path") as exc:
         pytinytex.ensure_tinytex_installed()
@@ -119,7 +121,7 @@ def test_get_tinytex_path_explicit_beats_env(monkeypatch, tmp_path):
     explicit = tmp_path / "explicit"
     explicit.mkdir()
     (explicit / "bin").mkdir()
-    (explicit / "bin/tlmgr").write_text("")
+    (explicit / "bin/tlmgr").touch()
     monkeypatch.setenv("PYTINYTEX_TINYTEX", os.fspath(tmp_path / "inexistent"))
     assert pytinytex.get_tinytex_path(base=explicit) == os.fspath(explicit / "bin")
 
@@ -147,7 +149,7 @@ def test_get_tinytex_path_discovers_default(monkeypatch, tmp_path, tlmgr_path):
     monkeypatch.delenv("PYTINYTEX_TINYTEX", raising=False)
     tlmgr = found / tlmgr_path.format(arch="fakearch")
     tlmgr.parent.mkdir(parents=True)
-    tlmgr.write_text("")
+    tlmgr.touch()
     assert pytinytex.get_tinytex_path() == os.fspath(tlmgr.parent)
 
 

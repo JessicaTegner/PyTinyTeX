@@ -57,7 +57,9 @@ def test_cli_download_honours_tinytex(monkeypatch):
     with mock.patch("pytinytex.download_tinytex") as dl:
         result = main(["--tinytex", "/tmp/opt/tinytext", "download"])
     assert result == 0
-    dl.assert_called_once_with(version="latest", variation=1, target_folder="/tmp/opt/tinytext")
+    dl.assert_called_once_with(
+        version="latest", variation=1, target_folder="/tmp/opt/tinytext"
+    )
 
 
 def test_cli_help_documents_tinytex(capsys):
@@ -80,7 +82,7 @@ def test_cli_uninstall_honours_tinytex(monkeypatch, tmp_path, source):
     pytinytex.clear_path_cache()
     tinytex_install = tmp_path / "tinytex"
     (tinytex_install / "bin").mkdir(parents=True)
-    (tinytex_install / "bin/tlmgr").write_text("")
+    (tinytex_install / "bin/tlmgr").touch()
     path = os.fspath(tinytex_install)
 
     rmtree = Mock()
