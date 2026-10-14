@@ -1,8 +1,12 @@
 """Tests for the CLI module."""
 
 import os
+import shutil
 from unittest import mock
+from unittest.mock import Mock
 
+import pytest
+import pytinytex
 from pytinytex.cli import main
 
 
@@ -62,3 +66,30 @@ def test_cli_help_documents_tinytex(capsys):
     except SystemExit:
         pass
     assert "--tinytex" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        lambda path: (["--tinytex", path], {}),
+        lambda path: ([], {"PYTINYTEX_TINYTEX": path}),
+    ],
+    ids=["flag", "env"],
+)
+def test_cli_uninstall_honours_tinytex(monkeypatch, tmp_path, source):
+    pytinytex.clear_path_cache()
+    tinytex_install = tmp_path / "tinytex"
+    (tinytex_install / "bin").mkdir(parents=True)
+    (tinytex_install / "bin/tlmgr").write_text("")
+    path = os.fspath(tinytex_install)
+
+    rmtree = Mock()
+    monkeypatch.setattr(shutil, "rmtree", rmtree)
+    cli_args, env = source(path)
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+
+    result = main(cli_args + ["uninstall"])
+
+    assert result == 0
+    rmtree.assert_called_once_with(tinytex_install)
