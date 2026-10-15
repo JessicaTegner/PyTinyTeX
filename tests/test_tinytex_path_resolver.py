@@ -126,6 +126,22 @@ def test_get_tinytex_path_explicit_beats_env(monkeypatch, tmp_path):
     assert pytinytex.get_tinytex_path(base=explicit) == os.fspath(explicit / "bin")
 
 
+def test_get_tinytex_path_explicit_beats_cache(tmp_path):
+    cached = tmp_path / "cached"
+    cached.mkdir()
+    (cached / "bin").mkdir()
+    (cached / "bin/tlmgr").touch()
+    explicit = tmp_path / "explicit"
+    explicit.mkdir()
+    (explicit / "bin").mkdir()
+    (explicit / "bin/tlmgr").touch()
+    # populate the cache from the first install
+    assert pytinytex.get_tinytex_path(base=cached) == os.fspath(cached / "bin")
+    assert pytinytex.__tinytex_path == os.fspath(cached / "bin")
+    # a later explicit base must beat the stale cache
+    assert pytinytex.get_tinytex_path(base=explicit) == os.fspath(explicit / "bin")
+
+
 def test_get_tinytex_path_inexistent_explicit_raises(monkeypatch, tmp_path):
     pytinytex.clear_path_cache()
     with pytest.raises(RuntimeError, match="Unable to resolve TinyTeX path"):

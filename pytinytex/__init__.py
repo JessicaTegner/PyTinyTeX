@@ -126,14 +126,9 @@ def get_tinytex_path(base=None):
     Raises:
             RuntimeError: If TinyTeX is not found.
     """
-    if __tinytex_path:
+    if not base and __tinytex_path:
         return __tinytex_path
-    if base:
-        ensure_tinytex_installed(base)
-    elif os.getenv("PYTINYTEX_TINYTEX"):
-        ensure_tinytex_installed(os.environ["PYTINYTEX_TINYTEX"])
-    else:
-        ensure_tinytex_installed()
+    ensure_tinytex_installed(base or os.getenv("PYTINYTEX_TINYTEX"))
     return __tinytex_path
 
 
