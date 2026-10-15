@@ -3,6 +3,8 @@ import os
 import platform
 import sys
 import warnings
+from collections import deque
+from contextlib import suppress
 from pathlib import Path
 from importlib.metadata import version as _metadata_version, PackageNotFoundError
 
@@ -36,6 +38,16 @@ logger.addHandler(logging.NullHandler())
 
 # Known LaTeX engines included in TinyTeX
 _LATEX_ENGINES = ["pdflatex", "xelatex", "lualatex", "latex"]
+
+# Known TeX Live platform-architecture directory names
+_KNOWN_ARCHS = {
+    "x86_64-linux",
+    "aarch64-linux",
+    "i386-linux",
+    "universal-darwin",
+    "x86_64-darwinlegacy",
+    "windows",
+}
 
 # Global cache
 __tinytex_path = None
@@ -147,11 +159,11 @@ def ensure_tinytex_installed(path=None):
     """
     global __tinytex_path
     if path:
-        __tinytex_path = _find_resolved([path])
+        __tinytex_path = _resolve_tinytex([path])
     elif __tinytex_path:
         return True
     else:
-        __tinytex_path = _find_resolved(candidate_tinytex_dirs())
+        __tinytex_path = _resolve_tinytex(candidate_tinytex_dirs())
     # Ensure the resolved bin directory is on PATH for this process
     _add_to_path(__tinytex_path)
     return True
@@ -260,55 +272,69 @@ def _get_platform_arch():
     return arch_map.get(machine, machine + "-linux")
 
 
-def _attempt_resolve_path(path):
-    if not os.path.isdir(path):
-        return None  # early exit
-    try:
+_ARCH_MISMATCH = (
+    "TinyTeX architecture mismatch. The wrong binary may have "
+    "been downloaded.\n{0}\nYou can point at another installation "
+    "with --tinytex / PYTINYTEX_TINYTEX."
+)
+
+
+def _scan_candidates(paths):
+    issues = {}
+    pending = deque(paths)
+    while pending:
+        path = pending.popleft()
+        if not os.path.isdir(path):
+            continue  # early exit
         if _find_file(path, "tlmgr"):
-            return path
+            return path, issues
         if os.path.isdir(os.path.join(path, "bin")):
-            return _attempt_resolve_path(os.path.join(path, "bin"))
-        entries = [e for e in os.listdir(path) if os.path.isdir(os.path.join(path, e))]
+            pending.appendleft(os.path.join(path, "bin"))
+            continue
+        entries = []
+        with suppress(FileNotFoundError):
+            entries = [
+                e for e in os.listdir(path) if os.path.isdir(os.path.join(path, e))
+            ]
         # Prefer the directory matching the current platform architecture
         expected_arch = _get_platform_arch()
         if expected_arch in entries:
-            return _attempt_resolve_path(os.path.join(path, expected_arch))
+            pending.appendleft(os.path.join(path, expected_arch))
+            continue
         # Only fall back to a single entry if it's not an architecture mismatch
-        _known_archs = {
-            "x86_64-linux",
-            "aarch64-linux",
-            "i386-linux",
-            "universal-darwin",
-            "x86_64-darwinlegacy",
-            "windows",
-        }
         if len(entries) == 1:
             entry = entries[0]
-            if entry in _known_archs and entry != expected_arch:
-                raise RuntimeError(
-                    f"TinyTeX architecture mismatch: found '{entry}' but "
-                    f"expected '{expected_arch}'. The wrong binary may have "
-                    "been downloaded.\nYou can point at another installation "
-                    "with --tinytex / PYTINYTEX_TINYTEX."
-                )
-            return _attempt_resolve_path(os.path.join(path, entry))
-    except FileNotFoundError:
-        pass
-    return None
+            if entry in _KNOWN_ARCHS and entry != expected_arch:
+                message = f"found '{entry}' but expected '{expected_arch}' at {path}"
+                issues.setdefault(_ARCH_MISMATCH, []).append(message)
+                continue
+            pending.appendleft(os.path.join(path, entry))
+    return None, issues
 
 
-def _find_resolved(candidates):
+def _resolve_tinytex(candidates):
     """Return the first resolvable TinyTeX path among candidates, else raise."""
     assert len(candidates) > 0  # sanity check, removed by -O
-    found = next(filter(None, map(_attempt_resolve_path, candidates)), None)
-    if found:
-        return found
+    found, issues = _scan_candidates(candidates)
+    message = _render_issues(issues)
     tried = "\n".join(f"  - {path}" for path in candidates)
-    raise RuntimeError(
+    generic = (
         "Unable to resolve TinyTeX path.\n"
         f"Tried:\n{tried}\n"
         "You can install TinyTeX using pytinytex.download_tinytex(), "
         "or point at an existing install with --tinytex / PYTINYTEX_TINYTEX."
+    )
+    if found and message:
+        logger.warning(message)
+    if not found:
+        raise RuntimeError(message or generic)
+    return found
+
+
+def _render_issues(issues):
+    return "\n\n".join(
+        category.format("\n".join(f"  - {detail}" for detail in details))
+        for category, details in issues.items()
     )
 
 

@@ -12,7 +12,7 @@ from .utils import download_tinytex, TINYTEX_DISTRIBUTION  # noqa
 
 def test_failing_resolver(download_tinytex):  # noqa
     with pytest.raises(RuntimeError, match="Unable to resolve TinyTeX path"):
-        pytinytex._find_resolved(["failing"])
+        pytinytex._resolve_tinytex(["failing"])
     with pytest.raises(RuntimeError, match="Unable to resolve TinyTeX path"):
         pytinytex.ensure_tinytex_installed("failing")
 
@@ -160,4 +160,18 @@ def test_architecture_mismatch_raises(monkeypatch, tmp_path):
     d.mkdir()
     (d / "x86_64-linux").mkdir()
     with pytest.raises(RuntimeError, match="architecture mismatch"):
-        pytinytex._find_resolved([d])
+        pytinytex._resolve_tinytex([d])
+
+
+def test_auto_discovery_skips_wrong_arch(monkeypatch, tmp_path):
+    pytinytex.clear_path_cache()
+    wrong = tmp_path / "wrong"
+    good = tmp_path / "good"
+    (wrong / "x86_64-linux").mkdir(parents=True)
+    (good / "bin").mkdir(parents=True)
+    (good / "bin/tlmgr").touch()
+    monkeypatch.setattr(pytinytex, "_get_platform_arch", lambda: "aarch64-linux")
+    monkeypatch.setattr(pytinytex, "candidate_tinytex_dirs", lambda: [wrong, good])
+
+    assert pytinytex.ensure_tinytex_installed() is True
+    assert pytinytex.__tinytex_path == os.fspath(good / "bin")
