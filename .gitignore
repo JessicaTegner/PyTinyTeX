@@ -1,6 +1,8 @@
 *.zip
 *.tar.gz
 *.tgz
+*.tar.xz
+*.exe
 tinytex/*
 
 
