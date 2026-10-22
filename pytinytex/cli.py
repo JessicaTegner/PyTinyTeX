@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 
 logger = logging.getLogger("pytinytex")
@@ -31,6 +32,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="pytinytex",
         description="Manage TinyTeX installations and compile LaTeX documents.",
+    )
+    parser.add_argument(
+        "--tinytex",
+        default=os.environ.get("PYTINYTEX_TINYTEX") or None,
+        help="Path to an existing TinyTeX install (defaults to PYTINYTEX_TINYTEX environment variable)",
     )
     sub = parser.add_subparsers(dest="command")
 
@@ -109,11 +115,18 @@ def main(argv=None):
     # uninstall
     p_uninstall = sub.add_parser("uninstall", help="Remove TinyTeX installation")
     p_uninstall.add_argument(
-        "--path", default=None, help="Path to TinyTeX installation to remove"
+        "--path",
+        default=None,
+        help="Path to TinyTeX installation to remove (defers by default to --tinytex or PYTINYTEX_TINYTEX)",
     )
 
     args = parser.parse_args(argv)
     _setup_logging()
+
+    if args.tinytex:
+        # Mirror --tinytex into PYTINYTEX_TINYTEX so library code that only
+        # reads the environment still honours the flag.
+        os.environ["PYTINYTEX_TINYTEX"] = args.tinytex
 
     if not args.command:
         parser.print_help()
@@ -188,14 +201,16 @@ def main(argv=None):
                 return 1
 
         elif args.command == "download":
+            download_kwargs = {"target_folder": args.tinytex} if args.tinytex else {}
             pytinytex.download_tinytex(
                 version=getattr(args, "version", "latest"),
                 variation=None if args.variation == "none" else int(args.variation),
+                **download_kwargs,
             )
             print("Done.")
 
         elif args.command == "uninstall":
-            pytinytex.uninstall(args.path)
+            pytinytex.uninstall(args.path or args.tinytex)
             print("TinyTeX uninstalled.")
 
     except RuntimeError as e:
