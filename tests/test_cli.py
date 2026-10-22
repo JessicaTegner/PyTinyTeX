@@ -6,6 +6,7 @@ from unittest import mock
 from unittest.mock import Mock
 
 import pytest
+
 import pytinytex
 from pytinytex.cli import main
 

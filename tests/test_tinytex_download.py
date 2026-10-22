@@ -3,6 +3,7 @@ import os
 import pytest
 
 import pytinytex
+
 from .utils import TINYTEX_DISTRIBUTION, cleanup
 
 

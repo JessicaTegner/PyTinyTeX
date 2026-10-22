@@ -29,7 +29,7 @@ No system-wide TeX installation required. Missing packages are installed automat
 pip install pytinytex
 ```
 
-Python 3.8+ on Linux, macOS, and Windows.
+Python 3.9+ on Linux, macOS, and Windows.
 
 ## Quick start
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
-from typing import List, Optional
+from typing import Optional
 
 
 @dataclasses.dataclass
@@ -22,9 +22,9 @@ class LogEntry:
 class ParsedLog:
     """Structured result of parsing a LaTeX log file."""
 
-    errors: List[LogEntry] = dataclasses.field(default_factory=list)
-    warnings: List[LogEntry] = dataclasses.field(default_factory=list)
-    missing_packages: List[str] = dataclasses.field(default_factory=list)
+    errors: list[LogEntry] = dataclasses.field(default_factory=list)
+    warnings: list[LogEntry] = dataclasses.field(default_factory=list)
+    missing_packages: list[str] = dataclasses.field(default_factory=list)
 
 
 # Patterns for extracting information from LaTeX logs

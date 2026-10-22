@@ -3,7 +3,8 @@ import os
 import pytest
 
 import pytinytex
-from .utils import download_tinytex, TINYTEX_DISTRIBUTION  # noqa
+
+from .utils import TINYTEX_DISTRIBUTION, download_tinytex  # noqa
 
 
 @pytest.mark.parametrize("download_tinytex", [1], indirect=True)

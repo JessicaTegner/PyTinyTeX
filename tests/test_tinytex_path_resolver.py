@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 
 import pytinytex
-from .utils import download_tinytex, TINYTEX_DISTRIBUTION  # noqa
+
+from .utils import TINYTEX_DISTRIBUTION, download_tinytex  # noqa
 
 
 def test_failing_resolver(download_tinytex):  # noqa

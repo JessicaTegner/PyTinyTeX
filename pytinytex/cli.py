@@ -16,7 +16,7 @@ class _CliFormatter(logging.Formatter):
     def format(self, record):
         if record.levelno == logging.INFO:
             return record.getMessage()
-        return "%s: %s" % (record.levelname.lower(), record.getMessage())
+        return f"{record.levelname.lower()}: {record.getMessage()}"
 
 
 def _setup_logging():
@@ -160,7 +160,7 @@ def main(argv=None):
                         loc = " (" + loc + ")"
                     print("  ! " + entry.message + loc)
             if result.warnings:
-                print("Warnings: %d" % len(result.warnings))
+                print(f"Warnings: {len(result.warnings)}")
             if result.success:
                 print("Success: " + str(result.pdf_path))
             else:
@@ -193,7 +193,7 @@ def main(argv=None):
             result = pytinytex.doctor()
             for check in result.checks:
                 status = "PASS" if check.passed else "FAIL"
-                print("  [%s] %s: %s" % (status, check.name, check.message))
+                print(f"  [{status}] {check.name}: {check.message}")
             if result.healthy:
                 print("\nAll checks passed.")
             else:
@@ -214,7 +214,7 @@ def main(argv=None):
             print("TinyTeX uninstalled.")
 
     except RuntimeError as e:
-        print("Error: %s" % e, file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         return 1
 
     return 0

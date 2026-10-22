@@ -34,7 +34,7 @@ def _default_progress(downloaded, total):
         mb = downloaded / (1024 * 1024)
         mb_total = total / (1024 * 1024)
         sys.stdout.write(
-            "\rDownloading TinyTeX: %.1f/%.1f MB (%d%%)" % (mb, mb_total, pct)
+            f"\rDownloading TinyTeX: {mb:.1f}/{mb_total:.1f} MB ({pct}%)"
         )
         sys.stdout.flush()
         if downloaded >= total:
@@ -50,9 +50,7 @@ def download_tinytex(
 ):
     if variation not in [None, 0, 1, 2]:
         raise RuntimeError(
-            "Invalid TinyTeX variation {}. Valid variations are None, 0, 1, 2.".format(
-                variation
-            )
+            f"Invalid TinyTeX variation {variation}. Valid variations are None, 0, 1, 2."
         )
     if version == "latest" and variation == 2:
         logger.info("TinyTeX-2 is only published in the daily release, using it.")
@@ -65,10 +63,10 @@ def download_tinytex(
         version = "v" + version
     elif version not in ("latest", "daily"):
         raise RuntimeError(
-            "Invalid TinyTeX version {}. TinyTeX version has to be in the format "
+            f"Invalid TinyTeX version {version}. TinyTeX version has to be in the format "
             "'latest' for the latest available version, 'daily' for the daily "
             "build, or year.month, for example: '2024.12', '2024.09' for a "
-            "specific version.".format(version)
+            "specific version."
         )
     if progress_callback is None and sys.stdout.isatty():
         progress_callback = _default_progress
@@ -135,7 +133,7 @@ def download_tinytex(
             with tarfile.open(filename, "r:*") as tf:
                 tf.extractall(tmpdirname)
         else:
-            raise RuntimeError("File {0} not supported".format(filename))
+            raise RuntimeError(f"File {filename} not supported")
         # archives contain a single "TinyTeX" (or ".TinyTeX" on Linux) folder
         tinytex_extracted = next(
             p for p in tmpdirname.iterdir() if p.name.lstrip(".") == "TinyTeX"
@@ -160,7 +158,7 @@ def _get_tinytex_urls(version, variation):
         version_url_frags = response.url.split("/")
         version = version_url_frags[-1]
     except urllib.error.HTTPError:
-        raise RuntimeError("Can't find TinyTeX version %s" % version)
+        raise RuntimeError(f"Can't find TinyTeX version {version}")
     response = urlopen(
         "https://github.com/rstudio/tinytex-releases/releases/expanded_assets/"
         + version
@@ -206,11 +204,17 @@ def _select_tinytex_urls(asset_paths, variation, arm64, musl=False):
             new_style["darwin"] = url
         elif os_name == "windows":
             new_style["win32"] = url
-        elif os_name == "linux-arm64" and arm64 and not musl:
-            new_style["linux"] = url
-        elif os_name == "linux-x86_64" and not arm64 and not musl:
-            new_style["linux"] = url
-        elif os_name == "linuxmusl-x86_64" and not arm64 and musl:
+        elif (
+            os_name == "linux-arm64"
+            and arm64
+            and not musl
+            or os_name == "linux-x86_64"
+            and not arm64
+            and not musl
+            or os_name == "linuxmusl-x86_64"
+            and not arm64
+            and musl
+        ):
             new_style["linux"] = url
         elif os_name is None:
             if ext == "zip":
