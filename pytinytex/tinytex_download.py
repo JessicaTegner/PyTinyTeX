@@ -7,12 +7,16 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-import urllib.error
 import zipfile
 from pathlib import Path
-from urllib.request import urlopen
+
+import certifi
+import requests
 
 logger = logging.getLogger("pytinytex")
+
+_HTTP_TIMEOUT = 60
+_DOWNLOAD_TIMEOUT = 300
 
 DEFAULT_TARGET_FOLDER = Path.home() / ".pytinytex"
 
@@ -25,6 +29,16 @@ def _is_arm64():
 def _is_musl():
     """Return True if running on a musl-based Linux (e.g. Alpine)."""
     return bool(glob.glob("/lib/ld-musl-*.so.1"))
+
+
+def _http_get(url, stream=False):
+    """GET *url* with certifi-backed TLS (via requests)."""
+    timeout = _DOWNLOAD_TIMEOUT if stream else _HTTP_TIMEOUT
+    response = requests.get(
+        url, timeout=timeout, stream=stream, verify=certifi.where()
+    )
+    response.raise_for_status()
+    return response
 
 
 def _default_progress(downloaded, total):
@@ -104,14 +118,13 @@ def download_tinytex(
         logger.info("* Using already downloaded file %s", filename)
     else:
         logger.info("* Downloading TinyTeX from %s ...", url)
-        response = urlopen(url)
+        response = _http_get(url, stream=True)
         total_size = int(response.headers.get("Content-Length", 0))
         with open(filename, "wb") as out_file:
             downloaded = 0
-            while True:
-                chunk = response.read(8192)
+            for chunk in response.iter_content(chunk_size=8192):
                 if not chunk:
-                    break
+                    continue
                 out_file.write(chunk)
                 downloaded += len(chunk)
                 if progress_callback:
@@ -156,16 +169,15 @@ def _get_tinytex_urls(version, variation):
         + version
     )
     try:
-        response = urlopen(url)
+        response = _http_get(url)
         version_url_frags = response.url.split("/")
         version = version_url_frags[-1]
-    except urllib.error.HTTPError:
+    except requests.HTTPError:
         raise RuntimeError("Can't find TinyTeX version %s" % version)
-    response = urlopen(
+    content = _http_get(
         "https://github.com/rstudio/tinytex-releases/releases/expanded_assets/"
         + version
-    )
-    content = response.read()
+    ).content
     regex = re.compile(
         r"/rstudio/tinytex-releases/releases/download/[^\"]*TinyTeX[^\"]*"
         r"\.(?:tar\.gz|tar\.xz|tgz|zip|exe)"

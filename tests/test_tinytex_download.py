@@ -1,6 +1,14 @@
 import os
+import shutil
+import ssl
+import subprocess
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
+import certifi
 import pytest
+import requests
 
 import pytinytex
 from .utils import TINYTEX_DISTRIBUTION, cleanup
@@ -198,3 +206,122 @@ def test_select_urls_old_naming():
 def test_failing_download_variation_2_with_pinned_version():
     with pytest.raises(RuntimeError, match="only available with version='daily'"):
         pytinytex.download_tinytex(variation=2, version="2024.12")
+
+
+def test_http_get_uses_requests(monkeypatch):
+    calls = []
+
+    class _Response:
+        url = "https://github.com/rstudio/tinytex-releases/releases/tag/v2026.03"
+        content = b""
+        headers = {"Content-Length": "4"}
+
+        def raise_for_status(self):
+            return None
+
+        def iter_content(self, chunk_size=8192):
+            yield b"data"
+
+    def fake_get(url, timeout=None, stream=False, verify=True):
+        calls.append(
+            {"url": url, "timeout": timeout, "stream": stream, "verify": verify}
+        )
+        return _Response()
+
+    monkeypatch.setattr(pytinytex.tinytex_download.requests, "get", fake_get)
+    response = pytinytex.tinytex_download._http_get("https://example.test/asset")
+    assert response.content == b""
+    assert calls == [
+        {
+            "url": "https://example.test/asset",
+            "timeout": pytinytex.tinytex_download._HTTP_TIMEOUT,
+            "stream": False,
+            "verify": certifi.where(),
+        }
+    ]
+    pytinytex.tinytex_download._http_get("https://example.test/asset", stream=True)
+    assert calls[-1]["stream"] is True
+    assert calls[-1]["timeout"] == pytinytex.tinytex_download._DOWNLOAD_TIMEOUT
+
+
+def test_missing_release_raises_runtime_error(monkeypatch):
+    def fake_get(url, timeout=None, stream=False, verify=True):
+        response = requests.models.Response()
+        response.status_code = 404
+        response.reason = "Not Found"
+        response.url = url
+        return response
+
+    monkeypatch.setattr(pytinytex.tinytex_download.requests, "get", fake_get)
+    with pytest.raises(RuntimeError, match="Can't find TinyTeX version"):
+        pytinytex.tinytex_download._get_tinytex_urls("v1999.01", 1)
+
+
+def test_http_get_uses_certifi_ca_bundle(monkeypatch):
+    captured = {}
+
+    class _Response:
+        def raise_for_status(self):
+            return None
+
+    def fake_get(url, timeout=None, stream=False, verify=True):
+        captured["verify"] = verify
+        return _Response()
+
+    monkeypatch.setattr(pytinytex.tinytex_download.requests, "get", fake_get)
+    pytinytex.tinytex_download._http_get("https://example.test/asset")
+    bundle = Path(certifi.where())
+    assert bundle.is_file()
+    assert captured["verify"] == str(bundle)
+    assert captured["verify"] is not True
+    assert captured["verify"] is not False
+
+
+@pytest.mark.skipif(shutil.which("openssl") is None, reason="openssl is required to mint a test certificate")
+def test_http_get_rejects_untrusted_certificate(tmp_path):
+    key = tmp_path / "key.pem"
+    cert = tmp_path / "cert.pem"
+    subprocess.run(
+        [
+            "openssl",
+            "req",
+            "-x509",
+            "-newkey",
+            "rsa:2048",
+            "-keyout",
+            str(key),
+            "-out",
+            str(cert),
+            "-days",
+            "1",
+            "-nodes",
+            "-subj",
+            "/CN=localhost",
+        ],
+        check=True,
+        capture_output=True,
+    )
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+        def log_message(self, *_args):
+            return
+
+    server = HTTPServer(("127.0.0.1", 0), _Handler)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(str(cert), str(key))
+    server.socket = ctx.wrap_socket(server.socket, server_side=True)
+    thread = threading.Thread(target=server.handle_request)
+    thread.daemon = True
+    thread.start()
+    url = "https://127.0.0.1:%d/" % server.server_address[1]
+    try:
+        with pytest.raises(requests.exceptions.SSLError):
+            pytinytex.tinytex_download._http_get(url)
+    finally:
+        server.server_close()
+        thread.join(timeout=2)

@@ -248,6 +248,7 @@ Contributions are welcome. When opening a PR, please keep the following guidelin
 ## Contributors
 
 * [Jessica Tegner](https://github.com/JessicaTegner) — Maintainer and original creator of PyTinyTeX
+* [Saksham Goyal](https://github.com/sakshamgoyal-01)
 
 ## License
 
