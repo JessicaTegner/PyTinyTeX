@@ -1,5 +1,6 @@
 import pytinytex
-from .utils import download_tinytex, TINYTEX_DISTRIBUTION  # noqa
+
+from .utils import TINYTEX_DISTRIBUTION, download_tinytex  # noqa
 
 
 def test_run_help(download_tinytex):  # noqa

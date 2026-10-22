@@ -5,8 +5,9 @@ import sys
 import warnings
 from collections import deque
 from contextlib import suppress
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _metadata_version
 from pathlib import Path
-from importlib.metadata import version as _metadata_version, PackageNotFoundError
 
 try:
     __version__ = _metadata_version("PyTinyTeX")
@@ -14,9 +15,9 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 from .tinytex_download import download_tinytex, DEFAULT_TARGET_FOLDER  # noqa
-from .log_parser import LogEntry, ParsedLog, parse_log  # noqa
-from .compiler import CompileResult, compile  # noqa
-from .doctor import DoctorCheck, DoctorResult, doctor  # noqa
+from .log_parser import LogEntry, ParsedLog, parse_log
+from .compiler import CompileResult, compile
+from .doctor import DoctorCheck, DoctorResult, doctor
 from .tlmgr import (  # noqa
     install,
     remove,
@@ -53,35 +54,35 @@ _KNOWN_ARCHS = {
 __tinytex_path = None
 
 __all__ = [
-    "download_tinytex",
     "DEFAULT_TARGET_FOLDER",
-    "ensure_tinytex_installed",
-    "get_tinytex_path",
-    "clear_path_cache",
-    "get_engine",
-    "get_pdflatex_engine",
-    "get_xelatex_engine",
-    "get_lualatex_engine",
-    "get_pdf_latex_engine",
-    "get_version",
-    "install",
-    "remove",
-    "list_installed",
-    "search",
-    "info",
-    "update",
-    "uninstall",
-    "help",
-    "shell",
-    "compile",
     "CompileResult",
+    "DoctorCheck",
+    "DoctorResult",
     "LogEntry",
     "ParsedLog",
-    "parse_log",
-    "doctor",
-    "DoctorResult",
-    "DoctorCheck",
     "__version__",
+    "clear_path_cache",
+    "compile",
+    "doctor",
+    "download_tinytex",
+    "ensure_tinytex_installed",
+    "get_engine",
+    "get_lualatex_engine",
+    "get_pdf_latex_engine",
+    "get_pdflatex_engine",
+    "get_tinytex_path",
+    "get_version",
+    "get_xelatex_engine",
+    "help",
+    "info",
+    "install",
+    "list_installed",
+    "parse_log",
+    "remove",
+    "search",
+    "shell",
+    "uninstall",
+    "update",
 ]
 
 

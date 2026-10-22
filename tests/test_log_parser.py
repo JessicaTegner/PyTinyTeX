@@ -1,6 +1,6 @@
 """Tests for the LaTeX log parser."""
 
-from pytinytex.log_parser import parse_log, LogEntry, ParsedLog
+from pytinytex.log_parser import LogEntry, ParsedLog, parse_log
 
 
 def test_parse_empty_log():

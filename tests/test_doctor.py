@@ -3,7 +3,8 @@
 import pytest
 
 import pytinytex
-from .utils import download_tinytex, TINYTEX_DISTRIBUTION  # noqa
+
+from .utils import TINYTEX_DISTRIBUTION, download_tinytex  # noqa
 
 
 def test_doctor_result_structure(download_tinytex):  # noqa
@@ -53,10 +54,7 @@ def test_doctor_reports_healthy(download_tinytex):  # noqa
     # All non-engine checks should pass
     core_checks = [c for c in result.checks if not c.name.startswith("Engine:")]
     for check in core_checks:
-        assert check.passed is True, "Check '%s' failed: %s" % (
-            check.name,
-            check.message,
-        )
+        assert check.passed is True, f"Check '{check.name}' failed: {check.message}"
 
 
 @pytest.mark.parametrize("download_tinytex", [1], indirect=True)

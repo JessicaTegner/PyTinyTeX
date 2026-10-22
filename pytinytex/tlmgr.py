@@ -361,7 +361,7 @@ def _refresh_filename_db(path):
         for raw_line in proc.stdout:
             logger.debug(raw_line.decode("utf-8", errors="replace").rstrip())
         proc.wait()
-    except Exception:
+    except OSError:
         logger.debug("mktexlsr failed, continuing anyway")
 
 
@@ -374,9 +374,8 @@ def _run_tlmgr_command(
     original_args = list(args)  # save before mutation
     from . import _find_file
 
-    if machine_readable:
-        if "--machine-readable" not in args:
-            args.insert(0, "--machine-readable")
+    if machine_readable and "--machine-readable" not in args:
+        args.insert(0, "--machine-readable")
     tlmgr_executable = _find_file(path, "tlmgr")
     if not tlmgr_executable:
         raise RuntimeError(f"Unable to find tlmgr in {path}")
@@ -456,7 +455,7 @@ async def _read_stdout(process, output_buffer):
             line = line.decode("utf-8", errors="replace").rstrip()
             output_buffer.append(line)
             logger.info(line)
-    except Exception as e:
+    except (OSError, ValueError) as e:
         logger.error("Error in _read_stdout: %s", e)
     finally:
         process._transport.close()
@@ -474,7 +473,7 @@ async def _send_stdin(process):
                 break
             process.stdin.write(user_input.encode("utf-8"))
             await process.stdin.drain()
-    except Exception as e:
+    except (OSError, ValueError) as e:
         logger.error("Error in _send_stdin: %s", e)
     finally:
         if process.stdin:

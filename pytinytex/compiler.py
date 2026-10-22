@@ -8,7 +8,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from .log_parser import LogEntry, ParsedLog, parse_log
 
@@ -24,9 +24,9 @@ class CompileResult:
     log_path: Optional[str] = None
     engine: str = "pdflatex"
     runs: int = 0
-    errors: List[LogEntry] = dataclasses.field(default_factory=list)
-    warnings: List[LogEntry] = dataclasses.field(default_factory=list)
-    installed_packages: List[str] = dataclasses.field(default_factory=list)
+    errors: list[LogEntry] = dataclasses.field(default_factory=list)
+    warnings: list[LogEntry] = dataclasses.field(default_factory=list)
+    installed_packages: list[str] = dataclasses.field(default_factory=list)
     output: str = ""
 
 
@@ -110,6 +110,7 @@ def compile(
             try:
                 proc = subprocess.run(
                     cmd,
+                    check=False,
                     capture_output=True,
                     creationflags=creation_flag,
                 )
@@ -119,7 +120,7 @@ def compile(
                 if stderr:
                     output_lines.append(stderr)
                 exit_code = proc.returncode
-            except Exception as e:
+            except OSError as e:
                 output_lines.append(str(e))
                 exit_code = 1
                 break
@@ -134,7 +135,7 @@ def compile(
                 with open(log_path, encoding="utf-8", errors="replace") as f:
                     log_content = f.read()
                 parsed = parse_log(log_content)
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 logger.warning("Failed to parse log file: %s", e)
 
         result.errors = parsed.errors

@@ -3,7 +3,6 @@
 import dataclasses
 import os
 import platform
-from typing import List
 
 
 @dataclasses.dataclass
@@ -20,7 +19,7 @@ class DoctorResult:
     """Overall health check result."""
 
     healthy: bool
-    checks: List[DoctorCheck] = dataclasses.field(default_factory=list)
+    checks: list[DoctorCheck] = dataclasses.field(default_factory=list)
 
 
 def doctor():
@@ -29,7 +28,7 @@ def doctor():
     Returns:
             DoctorResult with individual check outcomes.
     """
-    from . import get_tinytex_path, _LATEX_ENGINES, _find_file, _is_on_path
+    from . import _LATEX_ENGINES, _find_file, _is_on_path, get_tinytex_path
     from .tlmgr import get_version
 
     checks = []
@@ -37,7 +36,7 @@ def doctor():
     # 1. TinyTeX installed?
     try:
         path = get_tinytex_path()
-        checks.append(DoctorCheck("TinyTeX installed", True, "Found at %s" % path))
+        checks.append(DoctorCheck("TinyTeX installed", True, f"Found at {path}"))
     except RuntimeError as e:
         checks.append(DoctorCheck("TinyTeX installed", False, str(e)))
         return DoctorResult(healthy=False, checks=checks)
@@ -52,7 +51,7 @@ def doctor():
             DoctorCheck(
                 "PATH configured",
                 False,
-                "TinyTeX bin directory (%s) is not on PATH" % path,
+                f"TinyTeX bin directory ({path}) is not on PATH",
             )
         )
 
@@ -61,7 +60,7 @@ def doctor():
     if tlmgr:
         checks.append(DoctorCheck("tlmgr found", True, tlmgr))
     else:
-        checks.append(DoctorCheck("tlmgr found", False, "tlmgr not found in %s" % path))
+        checks.append(DoctorCheck("tlmgr found", False, f"tlmgr not found in {path}"))
 
     # 4. tlmgr functional?
     if tlmgr:
@@ -76,11 +75,11 @@ def doctor():
     for engine_name in _LATEX_ENGINES:
         engine_path = os.path.join(path, engine_name + suffix)
         if os.path.isfile(engine_path):
-            checks.append(DoctorCheck("Engine: %s" % engine_name, True, engine_path))
+            checks.append(DoctorCheck(f"Engine: {engine_name}", True, engine_path))
         else:
             checks.append(
                 DoctorCheck(
-                    "Engine: %s" % engine_name,
+                    f"Engine: {engine_name}",
                     False,
                     "Not found (requires TinyTeX variation >= 1)",
                 )

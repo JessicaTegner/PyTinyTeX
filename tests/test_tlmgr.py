@@ -4,7 +4,8 @@ import pytest
 
 import pytinytex
 from pytinytex.tlmgr import _needs_self_update
-from .utils import download_tinytex, TINYTEX_DISTRIBUTION  # noqa
+
+from .utils import TINYTEX_DISTRIBUTION, download_tinytex  # noqa
 
 
 class TestNeedsSelfUpdate:

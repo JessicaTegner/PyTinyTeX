@@ -1,7 +1,8 @@
 import pytest
 
 import pytinytex
-from .utils import download_tinytex, TINYTEX_DISTRIBUTION  # noqa
+
+from .utils import TINYTEX_DISTRIBUTION, download_tinytex  # noqa
 
 
 def test_list_installed(download_tinytex):  # noqa
@@ -93,7 +94,7 @@ def test_update(download_tinytex):  # noqa
     pytinytex.ensure_tinytex_installed(TINYTEX_DISTRIBUTION)
     # update -all may fail transiently due to tlmgr internal errors on CI
     try:
-        exit_code, output = pytinytex.update()
+        exit_code, _output = pytinytex.update()
         assert exit_code == 0
     except RuntimeError:
         pytest.skip("tlmgr update failed (transient CI issue)")
