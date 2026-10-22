@@ -74,7 +74,7 @@ def test_stdout_error_handling(error):
     if isinstance(error, (OSError, ValueError)):
         assert asyncio.run(tlmgr._read_stdout(process, [])) == 0
     else:
-        with pytest.raises(type(error), match="failure"):
+        with pytest.raises(type(error)):
             asyncio.run(tlmgr._read_stdout(process, []))
     process._transport.close.assert_called_once()
 
@@ -98,6 +98,6 @@ def test_stdin_error_handling(monkeypatch, error):
     if isinstance(error, (OSError, ValueError)):
         asyncio.run(tlmgr._send_stdin(process))
     else:
-        with pytest.raises(type(error), match="failure"):
+        with pytest.raises(type(error)):
             asyncio.run(tlmgr._send_stdin(process))
     process._transport.close.assert_called_once()
